@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
@@ -45,13 +46,17 @@ func (*Controller) Create(ctx context.Context, req *v1.CreateReq) (res *v1.Creat
 }
 
 func (*Controller) GetOne(ctx context.Context, req *v1.GetOneReq) (res *v1.GetOneRes, err error) {
+	g.Log().Info(ctx, "GetOne method called with ID:", req.Id)
+	fmt.Println("DEBUG: GetOne called with ID:", req.Id)
 	user, err := service.User().GetById(ctx, req.Id)
 	if err != nil {
+		g.Log().Error(ctx, "GetById error:", err)
 		return nil, err
 	}
 	res = &v1.GetOneRes{
 		User: user,
 	}
+	g.Log().Info(ctx, "GetOne method completed successfully")
 	return
 }
 

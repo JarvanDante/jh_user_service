@@ -6,7 +6,7 @@ syntax = "proto3";
 
 package pbentity;
 
-option go_package = "jh_user_service/Users/wangdante/D/kugou/jh/jh_user_service/api/pbentity";
+option go_package = "jh_user_service/api/pbentity";
 
 import "google/protobuf/timestamp.proto";
 
