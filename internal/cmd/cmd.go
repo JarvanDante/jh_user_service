@@ -17,7 +17,7 @@ var (
 	Main = gcmd.Command{
 		Name:  "main",
 		Usage: "main",
-		Brief: "start grpc server of simple goframe demos",
+		Brief: "start grpc server of jinhuang",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			// 初始化 Consul 客户端
 			registry.InitConsul()
