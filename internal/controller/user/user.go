@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"fmt"
-
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
