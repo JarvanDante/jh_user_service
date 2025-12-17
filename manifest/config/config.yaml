@@ -1,6 +1,6 @@
 # GRPC Server.
 grpc:
-  address: ":8002"
+  address: ":8001"
   name: "jh_user_service"
   logPath: ""
   logStdout: true
@@ -14,7 +14,7 @@ grpc:
 consul:
   addr: "172.19.0.29:8500"
   serviceName: "user-service"
-  servicePort: 8002
+  servicePort: 8001
   serviceAddr: "172.19.0.31"
 
 # Global logging.

@@ -30,7 +30,7 @@ func RegisterService() error {
 	serviceAddr := g.Cfg().MustGet(ctx, "consul.serviceAddr").String()
 
 	registration := &api.AgentServiceRegistration{
-		ID:      fmt.Sprintf("%s-1", serviceName),
+		ID:      fmt.Sprintf("%s-%s", serviceName, serviceAddr),
 		Name:    serviceName,
 		Address: serviceAddr,
 		Port:    servicePort,
