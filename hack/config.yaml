@@ -2,12 +2,12 @@
 gfcli:
   gen:
     dao:
-      - link: "mysql:root:654321@tcp(127.0.0.1:3306)/test"
-        tables: "user"
+      - link: "mysql:root:654321@tcp(127.0.0.1:3306)/jh_site"
+#        tables: "user"
         removePrefix: "gf_"
         descriptionTag: true
         noModelComment: true
 
     pbentity:
-      - link: "mysql:root:654321@tcp(127.0.0.1:3306)/test"
-        tables: "user"
+      - link: "mysql:root:654321@tcp(127.0.0.1:3306)/jh_site"
+#        tables: "user"
