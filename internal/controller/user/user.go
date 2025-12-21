@@ -2,13 +2,13 @@ package user
 
 import (
 	"context"
-	"fmt"
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
 	v1 "jh_user_service/api/user/v1"
 	"jh_user_service/internal/dao"
+	"jh_user_service/internal/middleware"
 	"jh_user_service/internal/model/do"
 	"jh_user_service/internal/service"
 )
@@ -36,37 +36,66 @@ func RegisterHTTP(s *ghttp.Server) {
 }
 
 func (*Controller) Create(ctx context.Context, req *v1.CreateReq) (res *v1.CreateRes, err error) {
+	middleware.LogWithTrace(ctx, "info", "创建用户请求 - 用户名: %s, 昵称: %s", req.Passport, req.Nickname)
+
 	_, err = dao.User.Ctx(ctx).Data(do.User{
 		Username: req.Passport,
 		Password: req.Password,
 		Realname: req.Nickname,
 	}).Insert()
+
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "创建用户失败: %v", err)
+		return nil, err
+	}
+
+	middleware.LogWithTrace(ctx, "info", "创建用户成功 - 用户名: %s", req.Passport)
 	return
 }
 
 func (*Controller) GetOne(ctx context.Context, req *v1.GetOneReq) (res *v1.GetOneRes, err error) {
-	g.Log().Info(ctx, "GetOne method called with ID:", req.Id)
-	fmt.Println("DEBUG: GetOne called with ID:", req.Id)
+	middleware.LogWithTrace(ctx, "info", "查询用户详情 - ID: %d", req.Id)
+
 	user, err := service.User().GetById(ctx, req.Id)
 	if err != nil {
-		g.Log().Error(ctx, "GetById error:", err)
+		middleware.LogWithTrace(ctx, "error", "查询用户失败 - ID: %d, 错误: %v", req.Id, err)
 		return nil, err
 	}
+
 	res = &v1.GetOneRes{
 		User: user,
 	}
-	g.Log().Info(ctx, "GetOne method completed successfully")
+
+	middleware.LogWithTrace(ctx, "info", "查询用户成功 - ID: %d", req.Id)
 	return
 }
 
 func (*Controller) GetList(ctx context.Context, req *v1.GetListReq) (res *v1.GetListRes, err error) {
+	middleware.LogWithTrace(ctx, "info", "查询用户列表 - 页码: %d, 大小: %d", req.Page, req.Size)
+
 	res = &v1.GetListRes{}
 	err = dao.User.Ctx(ctx).Page(int(req.Page), int(req.Size)).Scan(&res.Users)
+
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "查询用户列表失败: %v", err)
+		return nil, err
+	}
+
+	middleware.LogWithTrace(ctx, "info", "查询用户列表成功 - 返回 %d 条记录", len(res.Users))
 	return
 }
 
 func (*Controller) Delete(ctx context.Context, req *v1.DeleteReq) (res *v1.DeleteRes, err error) {
+	middleware.LogWithTrace(ctx, "info", "删除用户请求 - ID: %d", req.Id)
+
 	err = service.User().DeleteById(ctx, req.Id)
+
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "删除用户失败 - ID: %d, 错误: %v", req.Id, err)
+		return nil, err
+	}
+
+	middleware.LogWithTrace(ctx, "info", "删除用户成功 - ID: %d", req.Id)
 	return
 }
 

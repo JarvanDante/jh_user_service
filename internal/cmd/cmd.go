@@ -10,6 +10,7 @@ import (
 
 	"jh_user_service/internal/controller/admin"
 	"jh_user_service/internal/controller/user"
+	"jh_user_service/internal/middleware"
 	"jh_user_service/internal/registry"
 )
 
@@ -31,6 +32,7 @@ var (
 			c := grpcx.Server.NewConfig()
 			c.Options = append(c.Options, []grpc.ServerOption{
 				grpcx.Server.ChainUnary(
+					middleware.TraceInterceptor, // 添加traceId拦截器
 					grpcx.Server.UnaryValidate,
 				)}...,
 			)
