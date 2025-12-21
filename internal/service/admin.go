@@ -23,7 +23,6 @@ func (s *sAdmin) GetByUsername(ctx context.Context, username string, siteId int)
 		Username: username,
 		SiteId:   siteId,
 		Status:   1, // 正常状态
-		DeleteAt: 0, // 未删除
 	}).Scan(&admin)
 
 	return admin, err
@@ -33,9 +32,8 @@ func (s *sAdmin) GetByUsername(ctx context.Context, username string, siteId int)
 func (s *sAdmin) GetById(ctx context.Context, id uint) (*entity.Admin, error) {
 	var admin *entity.Admin
 	err := dao.Admin.Ctx(ctx).Where(do.Admin{
-		Id:       id,
-		Status:   1, // 正常状态
-		DeleteAt: 0, // 未删除
+		Id:     id,
+		Status: 1, // 正常状态
 	}).Scan(&admin)
 
 	return admin, err
@@ -61,4 +59,36 @@ func (s *sAdmin) AddLog(ctx context.Context, admin *entity.Admin, message string
 		CreatedAt:     gtime.Now(),
 	})
 	return err
+}
+
+// CreateAdmin 创建管理员
+func (s *sAdmin) CreateAdmin(ctx context.Context, siteId int, username, nickname, password string, roleId, status int) error {
+	// 插入管理员记录
+	_, err := dao.Admin.Ctx(ctx).Insert(do.Admin{
+		SiteId:      siteId,
+		Username:    username,
+		Nickname:    nickname,
+		Password:    password, // 密码应该已经在控制器中加密
+		AdminRoleId: roleId,
+		Status:      status,
+		CreatedAt:   gtime.Now(),
+		UpdatedAt:   gtime.Now(),
+	})
+
+	return err
+}
+
+// CheckUsernameExists 检查用户名是否已存在
+func (s *sAdmin) CheckUsernameExists(ctx context.Context, username string, siteId int) (bool, error) {
+	var admin *entity.Admin
+	err := dao.Admin.Ctx(ctx).Where(do.Admin{
+		Username: username,
+		SiteId:   siteId,
+	}).Scan(&admin)
+
+	if err != nil {
+		return false, err
+	}
+
+	return admin != nil, nil
 }

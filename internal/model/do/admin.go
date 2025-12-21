@@ -26,7 +26,6 @@ type Admin struct {
 	PaymentSound       any         // 第三方支付提示声音控制。0=关闭 1=播放一次
 	LastLoginIp        any         //
 	LastLoginTime      *gtime.Time //
-	DeleteAt           any         // 是否删除。0=未删除；其他为删除时间戳
 	CreatedAt          *gtime.Time //
 	UpdatedAt          *gtime.Time //
 }

@@ -35,7 +35,6 @@ type AdminColumns struct {
 	PaymentSound       string // 第三方支付提示声音控制。0=关闭 1=播放一次
 	LastLoginIp        string //
 	LastLoginTime      string //
-	DeleteAt           string // 是否删除。0=未删除；其他为删除时间戳
 	CreatedAt          string //
 	UpdatedAt          string //
 }
@@ -56,7 +55,6 @@ var adminColumns = AdminColumns{
 	PaymentSound:       "payment_sound",
 	LastLoginIp:        "last_login_ip",
 	LastLoginTime:      "last_login_time",
-	DeleteAt:           "delete_at",
 	CreatedAt:          "created_at",
 	UpdatedAt:          "updated_at",
 }

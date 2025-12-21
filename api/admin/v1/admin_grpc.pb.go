@@ -2,13 +2,12 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.0
 // - protoc             v6.33.1
-// source: admin/v1/admin.proto
+// source: manifest/protobuf/admin/v1/admin.proto
 
 package v1
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -22,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	Admin_Login_FullMethodName        = "/admin.Admin/Login"
 	Admin_RefreshToken_FullMethodName = "/admin.Admin/RefreshToken"
+	Admin_CreateAdmin_FullMethodName  = "/admin.Admin/CreateAdmin"
 )
 
 // AdminClient is the client API for Admin service.
@@ -30,6 +30,7 @@ const (
 type AdminClient interface {
 	Login(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*LoginRes, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenReq, opts ...grpc.CallOption) (*RefreshTokenRes, error)
+	CreateAdmin(ctx context.Context, in *CreateAdminReq, opts ...grpc.CallOption) (*CreateAdminRes, error)
 }
 
 type adminClient struct {
@@ -60,12 +61,23 @@ func (c *adminClient) RefreshToken(ctx context.Context, in *RefreshTokenReq, opt
 	return out, nil
 }
 
+func (c *adminClient) CreateAdmin(ctx context.Context, in *CreateAdminReq, opts ...grpc.CallOption) (*CreateAdminRes, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateAdminRes)
+	err := c.cc.Invoke(ctx, Admin_CreateAdmin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServer is the server API for Admin service.
 // All implementations must embed UnimplementedAdminServer
 // for forward compatibility.
 type AdminServer interface {
 	Login(context.Context, *LoginReq) (*LoginRes, error)
 	RefreshToken(context.Context, *RefreshTokenReq) (*RefreshTokenRes, error)
+	CreateAdmin(context.Context, *CreateAdminReq) (*CreateAdminRes, error)
 	mustEmbedUnimplementedAdminServer()
 }
 
@@ -81,6 +93,9 @@ func (UnimplementedAdminServer) Login(context.Context, *LoginReq) (*LoginRes, er
 }
 func (UnimplementedAdminServer) RefreshToken(context.Context, *RefreshTokenReq) (*RefreshTokenRes, error) {
 	return nil, status.Error(codes.Unimplemented, "method RefreshToken not implemented")
+}
+func (UnimplementedAdminServer) CreateAdmin(context.Context, *CreateAdminReq) (*CreateAdminRes, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAdmin not implemented")
 }
 func (UnimplementedAdminServer) mustEmbedUnimplementedAdminServer() {}
 func (UnimplementedAdminServer) testEmbeddedByValue()               {}
@@ -139,6 +154,24 @@ func _Admin_RefreshToken_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Admin_CreateAdmin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAdminReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).CreateAdmin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_CreateAdmin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).CreateAdmin(ctx, req.(*CreateAdminReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Admin_ServiceDesc is the grpc.ServiceDesc for Admin service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -154,7 +187,11 @@ var Admin_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "RefreshToken",
 			Handler:    _Admin_RefreshToken_Handler,
 		},
+		{
+			MethodName: "CreateAdmin",
+			Handler:    _Admin_CreateAdmin_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "admin/v1/admin.proto",
+	Metadata: "manifest/protobuf/admin/v1/admin.proto",
 }

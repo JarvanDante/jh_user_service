@@ -24,7 +24,6 @@ type Admin struct {
 	PaymentSound       int         `json:"paymentSound"       orm:"payment_sound"        description:"第三方支付提示声音控制。0=关闭 1=播放一次"`
 	LastLoginIp        string      `json:"lastLoginIp"        orm:"last_login_ip"        description:""`
 	LastLoginTime      *gtime.Time `json:"lastLoginTime"      orm:"last_login_time"      description:""`
-	DeleteAt           uint        `json:"deleteAt"           orm:"delete_at"            description:"是否删除。0=未删除；其他为删除时间戳"`
 	CreatedAt          *gtime.Time `json:"createdAt"          orm:"created_at"           description:""`
 	UpdatedAt          *gtime.Time `json:"updatedAt"          orm:"updated_at"           description:""`
 }
