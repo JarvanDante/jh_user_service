@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 
 	"jh_user_service/internal/controller/admin"
+	"jh_user_service/internal/controller/site"
 	"jh_user_service/internal/middleware"
 	"jh_user_service/internal/registry"
 	"jh_user_service/internal/tracing"
@@ -66,6 +67,7 @@ var (
 			)
 			s := grpcx.Server.New(c)
 			admin.Register(s)
+			site.Register(s)
 
 			fmt.Println("gRPC服务器启动中...")
 

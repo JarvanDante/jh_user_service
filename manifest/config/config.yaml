@@ -12,10 +12,10 @@ grpc:
 
 # Consul 配置
 consul:
-  addr: "172.19.0.29:8500"
+  addr: "localhost:8500"
   serviceName: "user-service"
   servicePort: 8001
-  serviceAddr: "172.19.0.31"
+  serviceAddr: "192.168.254.141"
 
 # Global logging - JSON格式
 logger:
@@ -33,5 +33,5 @@ database:
     stdout: true
 
   default:
-    link: "mysql:root:654321@tcp(172.19.0.4:3306)/jh_site"
+    link: "mysql:root:654321@tcp(localhost:3306)/jh_site"
     debug: true
