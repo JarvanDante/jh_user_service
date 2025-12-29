@@ -105,45 +105,80 @@ func (s *sSite) UpdateBasicSetting(ctx context.Context, req *v1.UpdateBasicSetti
 		return nil, fmt.Errorf("查询现有配置失败: %v", err)
 	}
 
-	// 准备更新数据
-	updateData := do.SiteConfig{
-		RegisterTimeInterval: req.IpRegisterTime,
-		SwitchRegister:       g.Map{"true": 1, "false": 0}[fmt.Sprintf("%t", req.OpenRegister)],
-		IsClose:              g.Map{"true": 1, "false": 0}[fmt.Sprintf("%t", req.Close)],
-		CloseReason:          req.CloseReason,
-		UrlAgentPc:           req.AgentUrl,
-		UrlMobile:            req.MobileUrl,
-		UrlAgentRegister:     req.AgentRegisterUrl,
-		UrlService:           req.ServiceUrl,
-		MobileLogo:           req.MobileLogo,
+	middleware.LogWithTrace(ctx, "info", "更新请求参数 - IpRegisterTime: %d, OpenRegister: %t, Close: %t", req.IpRegisterTime, req.OpenRegister, req.Close)
+	middleware.LogWithTrace(ctx, "info", "更新请求参数 - CloseReason: '%s', AgentUrl: '%s', ServiceUrl: '%s'", req.CloseReason, req.AgentUrl, req.ServiceUrl)
+	middleware.LogWithTrace(ctx, "info", "更新请求参数 - MinWithdraw: %f, MaxWithdraw: %f", req.MinWithdraw, req.MaxWithdraw)
+
+	// 使用map来精确控制要更新的字段
+	updateFields := g.Map{}
+
+	// 注册时间间隔 - 只有在请求中明确指定时才更新
+	if req.IpRegisterTime > 0 {
+		updateFields["register_time_interval"] = req.IpRegisterTime
 	}
 
-	// 设置提现金额，确保最小值
-	if req.MinWithdraw < 1 {
-		updateData.MinWithdraw = 1
-	} else {
-		updateData.MinWithdraw = req.MinWithdraw
+	// 布尔值字段 - 只有在请求中明确指定时才更新
+	// 注意：protobuf中布尔值的默认值是false，我们需要区分"未设置"和"设置为false"
+	// 这里我们假设如果传递了请求，就更新这些布尔值
+	updateFields["switch_register"] = g.Map{"true": 1, "false": 0}[fmt.Sprintf("%t", req.OpenRegister)]
+	updateFields["is_close"] = g.Map{"true": 1, "false": 0}[fmt.Sprintf("%t", req.Close)]
+
+	// 字符串字段 - 只有非空时才更新
+	if req.CloseReason != "" {
+		updateFields["close_reason"] = req.CloseReason
+	}
+	if req.AgentUrl != "" {
+		updateFields["url_agent_pc"] = req.AgentUrl
+	}
+	if req.MobileUrl != "" {
+		updateFields["url_mobile"] = req.MobileUrl
+	}
+	if req.AgentRegisterUrl != "" {
+		updateFields["url_agent_register"] = req.AgentRegisterUrl
+	}
+	if req.ServiceUrl != "" {
+		updateFields["url_service"] = req.ServiceUrl
+	}
+	if req.MobileLogo != "" {
+		updateFields["mobile_logo"] = req.MobileLogo
 	}
 
-	if req.MaxWithdraw < 1 {
-		updateData.MaxWithdraw = 9999999
-	} else {
-		updateData.MaxWithdraw = req.MaxWithdraw
+	// 提现金额 - 只有大于0时才更新
+	middleware.LogWithTrace(ctx, "info", "更新提现金额 - MinWithdraw: %f, MaxWithdraw: %f", req.MinWithdraw, req.MaxWithdraw)
+
+	if req.MinWithdraw > 0 {
+		if req.MinWithdraw < 1 {
+			updateFields["min_withdraw"] = 1
+			middleware.LogWithTrace(ctx, "info", "MinWithdraw设置为最小值1")
+		} else {
+			updateFields["min_withdraw"] = req.MinWithdraw
+			middleware.LogWithTrace(ctx, "info", "MinWithdraw设置为: %f", req.MinWithdraw)
+		}
+	}
+
+	if req.MaxWithdraw > 0 {
+		if req.MaxWithdraw < 1 {
+			updateFields["max_withdraw"] = 9999999
+			middleware.LogWithTrace(ctx, "info", "MaxWithdraw设置为默认值9999999")
+		} else {
+			updateFields["max_withdraw"] = req.MaxWithdraw
+			middleware.LogWithTrace(ctx, "info", "MaxWithdraw设置为: %f", req.MaxWithdraw)
+		}
 	}
 
 	// 如果配置不存在，创建新配置
 	if existingConfig == nil {
-		updateData.SiteId = siteId
-		_, err = dao.SiteConfig.Ctx(ctx).Data(updateData).Insert()
+		updateFields["site_id"] = siteId
+		_, err = dao.SiteConfig.Ctx(ctx).Data(updateFields).Insert()
 		if err != nil {
 			middleware.LogWithTrace(ctx, "error", "创建站点配置失败: %v", err)
 			return nil, fmt.Errorf("创建站点配置失败: %v", err)
 		}
 	} else {
-		// 更新现有配置
+		// 更新现有配置 - 只更新指定的字段
 		_, err = dao.SiteConfig.Ctx(ctx).Where(do.SiteConfig{
 			SiteId: siteId,
-		}).Data(updateData).Update()
+		}).Data(updateFields).Update()
 
 		if err != nil {
 			middleware.LogWithTrace(ctx, "error", "更新站点配置失败: %v", err)
