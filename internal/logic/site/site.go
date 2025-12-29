@@ -60,8 +60,8 @@ func (s *sSite) GetBasicSetting(ctx context.Context, req *v1.GetBasicSettingReq)
 		AgentUrl:             siteConfig.UrlAgentPc,
 		MobileUrl:            siteConfig.UrlMobile,
 		AgentRegisterUrl:     siteConfig.UrlAgentRegister,
-		MinWithdraw:          siteConfig.MinWithdraw,
-		MaxWithdraw:          siteConfig.MaxWithdraw,
+		MinWithdraw:          int32(siteConfig.MinWithdraw),
+		MaxWithdraw:          int32(siteConfig.MaxWithdraw),
 		MobileLogo:           siteConfig.MobileLogo,
 		DefaultAgentId:       int32(siteConfig.DefaultAgentId),
 		DefaultAgentName:     "", // 这里可以根据 DefaultAgentId 查询代理名称

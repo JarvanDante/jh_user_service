@@ -27,8 +27,8 @@ message GetBasicSettingRes {
     string agent_url = 8;                   // 代理链接地址
     string mobile_url = 9;                  // 手机域名地址
     string agent_register_url = 10;         // 代理推广地址
-    double min_withdraw = 11;               // 单笔最低提现金额
-    double max_withdraw = 12;               // 单笔最高提现金额
+    int32 min_withdraw = 11;               // 单笔最低提现金额
+    int32 max_withdraw = 12;               // 单笔最高提现金额
     string mobile_logo = 13;                // 手机端Logo
     int32 default_agent_id = 14;            // 默认代理ID
     string default_agent_name = 15;         // 默认代理名称
@@ -45,8 +45,8 @@ message UpdateBasicSettingReq {
     string agent_url = 6;                   // 代理链接地址
     string mobile_url = 7;                  // 手机域名地址
     string agent_register_url = 8;          // 代理推广地址
-    double min_withdraw = 9;                // 单笔最低提现金额
-    double max_withdraw = 10;               // 单笔最高提现金额
+    int32 min_withdraw = 9;                // 单笔最低提现金额
+    int32 max_withdraw = 10;               // 单笔最高提现金额
     string mobile_logo = 11;                // 手机端Logo
     string service_url = 12;                // 客服链接
 }

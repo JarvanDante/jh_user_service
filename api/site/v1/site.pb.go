@@ -81,8 +81,8 @@ type GetBasicSettingRes struct {
 	AgentUrl             string                 `protobuf:"bytes,8,opt,name=agent_url,json=agentUrl,proto3" json:"agent_url,omitempty" dc:"代理链接地址"`                                              // 代理链接地址
 	MobileUrl            string                 `protobuf:"bytes,9,opt,name=mobile_url,json=mobileUrl,proto3" json:"mobile_url,omitempty" dc:"手机域名地址"`                                           // 手机域名地址
 	AgentRegisterUrl     string                 `protobuf:"bytes,10,opt,name=agent_register_url,json=agentRegisterUrl,proto3" json:"agent_register_url,omitempty" dc:"代理推广地址"`                   // 代理推广地址
-	MinWithdraw          float64                `protobuf:"fixed64,11,opt,name=min_withdraw,json=minWithdraw,proto3" json:"min_withdraw,omitempty" dc:"单笔最低提现金额"`                                // 单笔最低提现金额
-	MaxWithdraw          float64                `protobuf:"fixed64,12,opt,name=max_withdraw,json=maxWithdraw,proto3" json:"max_withdraw,omitempty" dc:"单笔最高提现金额"`                                // 单笔最高提现金额
+	MinWithdraw          int32                  `protobuf:"varint,11,opt,name=min_withdraw,json=minWithdraw,proto3" json:"min_withdraw,omitempty" dc:"单笔最低提现金额"`                                 // 单笔最低提现金额
+	MaxWithdraw          int32                  `protobuf:"varint,12,opt,name=max_withdraw,json=maxWithdraw,proto3" json:"max_withdraw,omitempty" dc:"单笔最高提现金额"`                                 // 单笔最高提现金额
 	MobileLogo           string                 `protobuf:"bytes,13,opt,name=mobile_logo,json=mobileLogo,proto3" json:"mobile_logo,omitempty" dc:"手机端Logo"`                                      // 手机端Logo
 	DefaultAgentId       int32                  `protobuf:"varint,14,opt,name=default_agent_id,json=defaultAgentId,proto3" json:"default_agent_id,omitempty" dc:"默认代理ID"`                        // 默认代理ID
 	DefaultAgentName     string                 `protobuf:"bytes,15,opt,name=default_agent_name,json=defaultAgentName,proto3" json:"default_agent_name,omitempty" dc:"默认代理名称"`                   // 默认代理名称
@@ -192,14 +192,14 @@ func (x *GetBasicSettingRes) GetAgentRegisterUrl() string {
 	return ""
 }
 
-func (x *GetBasicSettingRes) GetMinWithdraw() float64 {
+func (x *GetBasicSettingRes) GetMinWithdraw() int32 {
 	if x != nil {
 		return x.MinWithdraw
 	}
 	return 0
 }
 
-func (x *GetBasicSettingRes) GetMaxWithdraw() float64 {
+func (x *GetBasicSettingRes) GetMaxWithdraw() int32 {
 	if x != nil {
 		return x.MaxWithdraw
 	}
@@ -251,8 +251,8 @@ type UpdateBasicSettingReq struct {
 	AgentUrl         string                 `protobuf:"bytes,6,opt,name=agent_url,json=agentUrl,proto3" json:"agent_url,omitempty" dc:"代理链接地址"`                            // 代理链接地址
 	MobileUrl        string                 `protobuf:"bytes,7,opt,name=mobile_url,json=mobileUrl,proto3" json:"mobile_url,omitempty" dc:"手机域名地址"`                         // 手机域名地址
 	AgentRegisterUrl string                 `protobuf:"bytes,8,opt,name=agent_register_url,json=agentRegisterUrl,proto3" json:"agent_register_url,omitempty" dc:"代理推广地址"`  // 代理推广地址
-	MinWithdraw      float64                `protobuf:"fixed64,9,opt,name=min_withdraw,json=minWithdraw,proto3" json:"min_withdraw,omitempty" dc:"单笔最低提现金额"`               // 单笔最低提现金额
-	MaxWithdraw      float64                `protobuf:"fixed64,10,opt,name=max_withdraw,json=maxWithdraw,proto3" json:"max_withdraw,omitempty" dc:"单笔最高提现金额"`              // 单笔最高提现金额
+	MinWithdraw      int32                  `protobuf:"varint,9,opt,name=min_withdraw,json=minWithdraw,proto3" json:"min_withdraw,omitempty" dc:"单笔最低提现金额"`                // 单笔最低提现金额
+	MaxWithdraw      int32                  `protobuf:"varint,10,opt,name=max_withdraw,json=maxWithdraw,proto3" json:"max_withdraw,omitempty" dc:"单笔最高提现金额"`               // 单笔最高提现金额
 	MobileLogo       string                 `protobuf:"bytes,11,opt,name=mobile_logo,json=mobileLogo,proto3" json:"mobile_logo,omitempty" dc:"手机端Logo"`                    // 手机端Logo
 	ServiceUrl       string                 `protobuf:"bytes,12,opt,name=service_url,json=serviceUrl,proto3" json:"service_url,omitempty" dc:"客服链接"`                       // 客服链接
 	unknownFields    protoimpl.UnknownFields
@@ -345,14 +345,14 @@ func (x *UpdateBasicSettingReq) GetAgentRegisterUrl() string {
 	return ""
 }
 
-func (x *UpdateBasicSettingReq) GetMinWithdraw() float64 {
+func (x *UpdateBasicSettingReq) GetMinWithdraw() int32 {
 	if x != nil {
 		return x.MinWithdraw
 	}
 	return 0
 }
 
-func (x *UpdateBasicSettingReq) GetMaxWithdraw() float64 {
+func (x *UpdateBasicSettingReq) GetMaxWithdraw() int32 {
 	if x != nil {
 		return x.MaxWithdraw
 	}
@@ -438,8 +438,8 @@ const file_site_v1_site_proto_rawDesc = "" +
 	"mobile_url\x18\t \x01(\tR\tmobileUrl\x12,\n" +
 	"\x12agent_register_url\x18\n" +
 	" \x01(\tR\x10agentRegisterUrl\x12!\n" +
-	"\fmin_withdraw\x18\v \x01(\x01R\vminWithdraw\x12!\n" +
-	"\fmax_withdraw\x18\f \x01(\x01R\vmaxWithdraw\x12\x1f\n" +
+	"\fmin_withdraw\x18\v \x01(\x05R\vminWithdraw\x12!\n" +
+	"\fmax_withdraw\x18\f \x01(\x05R\vmaxWithdraw\x12\x1f\n" +
 	"\vmobile_logo\x18\r \x01(\tR\n" +
 	"mobileLogo\x12(\n" +
 	"\x10default_agent_id\x18\x0e \x01(\x05R\x0edefaultAgentId\x12,\n" +
@@ -456,9 +456,9 @@ const file_site_v1_site_proto_rawDesc = "" +
 	"\n" +
 	"mobile_url\x18\a \x01(\tR\tmobileUrl\x12,\n" +
 	"\x12agent_register_url\x18\b \x01(\tR\x10agentRegisterUrl\x12!\n" +
-	"\fmin_withdraw\x18\t \x01(\x01R\vminWithdraw\x12!\n" +
+	"\fmin_withdraw\x18\t \x01(\x05R\vminWithdraw\x12!\n" +
 	"\fmax_withdraw\x18\n" +
-	" \x01(\x01R\vmaxWithdraw\x12\x1f\n" +
+	" \x01(\x05R\vmaxWithdraw\x12\x1f\n" +
 	"\vmobile_logo\x18\v \x01(\tR\n" +
 	"mobileLogo\x12\x1f\n" +
 	"\vservice_url\x18\f \x01(\tR\n" +
