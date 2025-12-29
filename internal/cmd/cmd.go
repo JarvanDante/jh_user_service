@@ -9,7 +9,6 @@ import (
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gcmd"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 
 	"jh_user_service/internal/controller/admin"
@@ -59,12 +58,13 @@ var (
 
 			c := grpcx.Server.NewConfig()
 			c.Options = append(c.Options, []grpc.ServerOption{
+				// 使用 StatsHandler 替代 Interceptor 进行追踪和统计
+				grpc.StatsHandler(middleware.NewTraceStatsHandler()),
+				// 保留验证拦截器
 				grpcx.Server.ChainUnary(
-					otelgrpc.UnaryServerInterceptor(), // 添加OpenTelemetry gRPC拦截器
-					middleware.TraceInterceptor,       // 保留原有的traceId拦截器
 					grpcx.Server.UnaryValidate,
-				)}...,
-			)
+				),
+			}...)
 			s := grpcx.Server.New(c)
 			admin.Register(s)
 			site.Register(s)
