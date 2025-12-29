@@ -56,10 +56,10 @@ func (s *sSite) GetBasicSetting(ctx context.Context, req *v1.GetBasicSettingReq)
 		SwitchRegister:       siteConfig.SwitchRegister == 1,
 		IsClose:              siteConfig.IsClose == 1,
 		CloseReason:          siteConfig.CloseReason,
-		ServiceUrl:           siteConfig.UrlService,
-		AgentUrl:             siteConfig.UrlAgentPc,
-		MobileUrl:            siteConfig.UrlMobile,
-		AgentRegisterUrl:     siteConfig.UrlAgentRegister,
+		UrlService:           siteConfig.UrlService,
+		UrlAgentPc:           siteConfig.UrlAgentPc,
+		UrlMobile:            siteConfig.UrlMobile,
+		UrlAgentRegister:     siteConfig.UrlAgentRegister,
 		MinWithdraw:          int32(siteConfig.MinWithdraw),
 		MaxWithdraw:          int32(siteConfig.MaxWithdraw),
 		MobileLogo:           siteConfig.MobileLogo,
@@ -105,84 +105,121 @@ func (s *sSite) UpdateBasicSetting(ctx context.Context, req *v1.UpdateBasicSetti
 		return nil, fmt.Errorf("查询现有配置失败: %v", err)
 	}
 
-	middleware.LogWithTrace(ctx, "info", "更新请求参数 - IpRegisterTime: %d, OpenRegister: %t, Close: %t", req.IpRegisterTime, req.OpenRegister, req.Close)
-	middleware.LogWithTrace(ctx, "info", "更新请求参数 - CloseReason: '%s', AgentUrl: '%s', ServiceUrl: '%s'", req.CloseReason, req.AgentUrl, req.ServiceUrl)
-	middleware.LogWithTrace(ctx, "info", "更新请求参数 - MinWithdraw: %f, MaxWithdraw: %f", req.MinWithdraw, req.MaxWithdraw)
+	middleware.LogWithTrace(ctx, "info", "更新请求参数 - RegisterTimeInterval: %d, SwitchRegister: %t, IsClose: %t", req.RegisterTimeInterval, req.SwitchRegister, req.IsClose)
+	middleware.LogWithTrace(ctx, "info", "更新请求参数 - CloseReason: '%s', UrlAgentPc: '%s', UrlService: '%s'", req.CloseReason, req.UrlAgentPc, req.UrlService)
+	middleware.LogWithTrace(ctx, "info", "更新请求参数 - MinWithdraw: %d, MaxWithdraw: %d", req.MinWithdraw, req.MaxWithdraw)
 
 	// 使用map来精确控制要更新的字段
 	updateFields := g.Map{}
 
 	// 注册时间间隔 - 只有在请求中明确指定时才更新
-	if req.IpRegisterTime > 0 {
-		updateFields["register_time_interval"] = req.IpRegisterTime
+	if req.RegisterTimeInterval > 0 {
+		updateFields["register_time_interval"] = req.RegisterTimeInterval
+		middleware.LogWithTrace(ctx, "info", "添加更新字段: register_time_interval = %d", req.RegisterTimeInterval)
 	}
 
 	// 布尔值字段 - 只有在请求中明确指定时才更新
 	// 注意：protobuf中布尔值的默认值是false，我们需要区分"未设置"和"设置为false"
 	// 这里我们假设如果传递了请求，就更新这些布尔值
-	updateFields["switch_register"] = g.Map{"true": 1, "false": 0}[fmt.Sprintf("%t", req.OpenRegister)]
-	updateFields["is_close"] = g.Map{"true": 1, "false": 0}[fmt.Sprintf("%t", req.Close)]
+	switchRegisterValue := g.Map{"true": 1, "false": 0}[fmt.Sprintf("%t", req.SwitchRegister)]
+	updateFields["switch_register"] = switchRegisterValue
+	middleware.LogWithTrace(ctx, "info", "添加更新字段: switch_register = %v (原值: %t)", switchRegisterValue, req.SwitchRegister)
+
+	isCloseValue := g.Map{"true": 1, "false": 0}[fmt.Sprintf("%t", req.IsClose)]
+	updateFields["is_close"] = isCloseValue
+	middleware.LogWithTrace(ctx, "info", "添加更新字段: is_close = %v (原值: %t)", isCloseValue, req.IsClose)
 
 	// 字符串字段 - 只有非空时才更新
 	if req.CloseReason != "" {
 		updateFields["close_reason"] = req.CloseReason
+		middleware.LogWithTrace(ctx, "info", "添加更新字段: close_reason = '%s'", req.CloseReason)
 	}
-	if req.AgentUrl != "" {
-		updateFields["url_agent_pc"] = req.AgentUrl
+	if req.UrlAgentPc != "" {
+		updateFields["url_agent_pc"] = req.UrlAgentPc
+		middleware.LogWithTrace(ctx, "info", "添加更新字段: url_agent_pc = '%s'", req.UrlAgentPc)
 	}
-	if req.MobileUrl != "" {
-		updateFields["url_mobile"] = req.MobileUrl
+	if req.UrlMobile != "" {
+		updateFields["url_mobile"] = req.UrlMobile
+		middleware.LogWithTrace(ctx, "info", "添加更新字段: url_mobile = '%s'", req.UrlMobile)
 	}
-	if req.AgentRegisterUrl != "" {
-		updateFields["url_agent_register"] = req.AgentRegisterUrl
+	if req.UrlAgentRegister != "" {
+		updateFields["url_agent_register"] = req.UrlAgentRegister
+		middleware.LogWithTrace(ctx, "info", "添加更新字段: url_agent_register = '%s'", req.UrlAgentRegister)
 	}
-	if req.ServiceUrl != "" {
-		updateFields["url_service"] = req.ServiceUrl
+	if req.UrlService != "" {
+		updateFields["url_service"] = req.UrlService
+		middleware.LogWithTrace(ctx, "info", "添加更新字段: url_service = '%s'", req.UrlService)
 	}
 	if req.MobileLogo != "" {
 		updateFields["mobile_logo"] = req.MobileLogo
+		middleware.LogWithTrace(ctx, "info", "添加更新字段: mobile_logo = '%s'", req.MobileLogo)
 	}
 
 	// 提现金额 - 只有大于0时才更新
-	middleware.LogWithTrace(ctx, "info", "更新提现金额 - MinWithdraw: %f, MaxWithdraw: %f", req.MinWithdraw, req.MaxWithdraw)
+	middleware.LogWithTrace(ctx, "info", "检查提现金额 - MinWithdraw: %d, MaxWithdraw: %d", req.MinWithdraw, req.MaxWithdraw)
 
 	if req.MinWithdraw > 0 {
 		if req.MinWithdraw < 1 {
 			updateFields["min_withdraw"] = 1
-			middleware.LogWithTrace(ctx, "info", "MinWithdraw设置为最小值1")
+			middleware.LogWithTrace(ctx, "info", "添加更新字段: min_withdraw = 1 (原值太小)")
 		} else {
 			updateFields["min_withdraw"] = req.MinWithdraw
-			middleware.LogWithTrace(ctx, "info", "MinWithdraw设置为: %f", req.MinWithdraw)
+			middleware.LogWithTrace(ctx, "info", "添加更新字段: min_withdraw = %d", req.MinWithdraw)
 		}
+	} else {
+		middleware.LogWithTrace(ctx, "info", "跳过 min_withdraw 更新，值为: %d", req.MinWithdraw)
 	}
 
 	if req.MaxWithdraw > 0 {
 		if req.MaxWithdraw < 1 {
 			updateFields["max_withdraw"] = 9999999
-			middleware.LogWithTrace(ctx, "info", "MaxWithdraw设置为默认值9999999")
+			middleware.LogWithTrace(ctx, "info", "添加更新字段: max_withdraw = 9999999 (原值太小)")
 		} else {
 			updateFields["max_withdraw"] = req.MaxWithdraw
-			middleware.LogWithTrace(ctx, "info", "MaxWithdraw设置为: %f", req.MaxWithdraw)
+			middleware.LogWithTrace(ctx, "info", "添加更新字段: max_withdraw = %d", req.MaxWithdraw)
 		}
+	} else {
+		middleware.LogWithTrace(ctx, "info", "跳过 max_withdraw 更新，值为: %d", req.MaxWithdraw)
 	}
+
+	middleware.LogWithTrace(ctx, "info", "准备更新的字段总数: %d, 字段: %+v", len(updateFields), updateFields)
 
 	// 如果配置不存在，创建新配置
 	if existingConfig == nil {
 		updateFields["site_id"] = siteId
-		_, err = dao.SiteConfig.Ctx(ctx).Data(updateFields).Insert()
+		middleware.LogWithTrace(ctx, "info", "配置不存在，创建新配置，字段: %+v", updateFields)
+		result, err := dao.SiteConfig.Ctx(ctx).Data(updateFields).Insert()
 		if err != nil {
 			middleware.LogWithTrace(ctx, "error", "创建站点配置失败: %v", err)
 			return nil, fmt.Errorf("创建站点配置失败: %v", err)
 		}
+		middleware.LogWithTrace(ctx, "info", "创建站点配置成功，影响行数: %v", result)
 	} else {
 		// 更新现有配置 - 只更新指定的字段
-		_, err = dao.SiteConfig.Ctx(ctx).Where(do.SiteConfig{
+		middleware.LogWithTrace(ctx, "info", "配置存在，更新现有配置，SiteId: %d, 字段: %+v", siteId, updateFields)
+
+		// 检查是否有字段需要更新
+		if len(updateFields) == 0 {
+			middleware.LogWithTrace(ctx, "warning", "没有字段需要更新，跳过数据库操作")
+			return &v1.UpdateBasicSettingRes{
+				Message: "没有字段需要更新",
+			}, nil
+		}
+
+		result, err := dao.SiteConfig.Ctx(ctx).Where(do.SiteConfig{
 			SiteId: siteId,
 		}).Data(updateFields).Update()
 
 		if err != nil {
 			middleware.LogWithTrace(ctx, "error", "更新站点配置失败: %v", err)
 			return nil, fmt.Errorf("更新站点配置失败: %v", err)
+		}
+
+		rowsAffected, _ := result.RowsAffected()
+		middleware.LogWithTrace(ctx, "info", "数据库更新完成，影响行数: %d", rowsAffected)
+
+		if rowsAffected == 0 {
+			middleware.LogWithTrace(ctx, "warning", "数据库更新影响行数为0，可能是条件不匹配或数据未变化")
 		}
 	}
 
@@ -195,15 +232,15 @@ func (s *sSite) UpdateBasicSetting(ctx context.Context, req *v1.UpdateBasicSetti
 // validateUpdateBasicSetting 验证更新基本设置的参数
 func (s *sSite) validateUpdateBasicSetting(req *v1.UpdateBasicSettingReq) error {
 	// 验证URL格式（简单验证）
-	if req.AgentUrl != "" && len(req.AgentUrl) < 7 {
+	if req.UrlAgentPc != "" && len(req.UrlAgentPc) < 7 {
 		return fmt.Errorf("代理链接地址格式错误")
 	}
 
-	if req.MobileUrl != "" && len(req.MobileUrl) < 7 {
+	if req.UrlMobile != "" && len(req.UrlMobile) < 7 {
 		return fmt.Errorf("手机域名地址格式错误")
 	}
 
-	if req.AgentRegisterUrl != "" && len(req.AgentRegisterUrl) < 7 {
+	if req.UrlAgentRegister != "" && len(req.UrlAgentRegister) < 7 {
 		return fmt.Errorf("代理推广地址格式错误")
 	}
 
