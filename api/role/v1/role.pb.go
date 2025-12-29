@@ -13,7 +13,6 @@ import (
 
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -69,13 +68,13 @@ func (x *GetRoleListReq) GetSiteId() int32 {
 
 type RoleInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty" dc:"角色ID"`                               // 角色ID
-	SiteId        int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty" dc:"站点ID"`         // 站点ID
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty" dc:"角色名称"`                            // 角色名称
-	Status        int32                  `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty" dc:"状态：0=禁用，1=启用"`               // 状态：0=禁用，1=启用
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" dc:"创建时间"` // 创建时间
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" dc:"更新时间"` // 更新时间
-	Permissions   string                 `protobuf:"bytes,7,opt,name=permissions,proto3" json:"permissions,omitempty" dc:"权限配置"`              // 权限配置
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty" dc:"角色ID"`                                 // 角色ID
+	SiteId        int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty" dc:"站点ID"`           // 站点ID
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty" dc:"角色名称"`                              // 角色名称
+	Status        int32                  `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty" dc:"状态：0=禁用，1=启用"`                 // 状态：0=禁用，1=启用
+	CreatedAt     int64                  `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" dc:"创建时间戳"` // 创建时间戳
+	UpdatedAt     int64                  `protobuf:"varint,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" dc:"更新时间戳"` // 更新时间戳
+	Permissions   string                 `protobuf:"bytes,7,opt,name=permissions,proto3" json:"permissions,omitempty" dc:"权限配置"`                // 权限配置
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -138,18 +137,18 @@ func (x *RoleInfo) GetStatus() int32 {
 	return 0
 }
 
-func (x *RoleInfo) GetCreatedAt() *timestamppb.Timestamp {
+func (x *RoleInfo) GetCreatedAt() int64 {
 	if x != nil {
 		return x.CreatedAt
 	}
-	return nil
+	return 0
 }
 
-func (x *RoleInfo) GetUpdatedAt() *timestamppb.Timestamp {
+func (x *RoleInfo) GetUpdatedAt() int64 {
 	if x != nil {
 		return x.UpdatedAt
 	}
-	return nil
+	return 0
 }
 
 func (x *RoleInfo) GetPermissions() string {
@@ -207,18 +206,18 @@ var File_role_v1_role_proto protoreflect.FileDescriptor
 
 const file_role_v1_role_proto_rawDesc = "" +
 	"\n" +
-	"\x12role/v1/role.proto\x12\x04role\x1a\x1fgoogle/protobuf/timestamp.proto\")\n" +
+	"\x12role/v1/role.proto\x12\x04role\")\n" +
 	"\x0eGetRoleListReq\x12\x17\n" +
-	"\asite_id\x18\x01 \x01(\x05R\x06siteId\"\xf7\x01\n" +
+	"\asite_id\x18\x01 \x01(\x05R\x06siteId\"\xbf\x01\n" +
 	"\bRoleInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x17\n" +
 	"\asite_id\x18\x02 \x01(\x05R\x06siteId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\x05R\x06status\x129\n" +
+	"\x06status\x18\x04 \x01(\x05R\x06status\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\x05 \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12 \n" +
+	"updated_at\x18\x06 \x01(\x03R\tupdatedAt\x12 \n" +
 	"\vpermissions\x18\a \x01(\tR\vpermissions\"6\n" +
 	"\x0eGetRoleListRes\x12$\n" +
 	"\x05roles\x18\x01 \x03(\v2\x0e.role.RoleInfoR\x05roles2C\n" +
@@ -239,22 +238,19 @@ func file_role_v1_role_proto_rawDescGZIP() []byte {
 
 var file_role_v1_role_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_role_v1_role_proto_goTypes = []any{
-	(*GetRoleListReq)(nil),        // 0: role.GetRoleListReq
-	(*RoleInfo)(nil),              // 1: role.RoleInfo
-	(*GetRoleListRes)(nil),        // 2: role.GetRoleListRes
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
+	(*GetRoleListReq)(nil), // 0: role.GetRoleListReq
+	(*RoleInfo)(nil),       // 1: role.RoleInfo
+	(*GetRoleListRes)(nil), // 2: role.GetRoleListRes
 }
 var file_role_v1_role_proto_depIdxs = []int32{
-	3, // 0: role.RoleInfo.created_at:type_name -> google.protobuf.Timestamp
-	3, // 1: role.RoleInfo.updated_at:type_name -> google.protobuf.Timestamp
-	1, // 2: role.GetRoleListRes.roles:type_name -> role.RoleInfo
-	0, // 3: role.Role.GetRoleList:input_type -> role.GetRoleListReq
-	2, // 4: role.Role.GetRoleList:output_type -> role.GetRoleListRes
-	4, // [4:5] is the sub-list for method output_type
-	3, // [3:4] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	1, // 0: role.GetRoleListRes.roles:type_name -> role.RoleInfo
+	0, // 1: role.Role.GetRoleList:input_type -> role.GetRoleListReq
+	2, // 2: role.Role.GetRoleList:output_type -> role.GetRoleListRes
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_role_v1_role_proto_init() }
