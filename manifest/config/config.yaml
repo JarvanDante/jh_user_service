@@ -25,6 +25,10 @@ jaeger:
   environment: "development" # 环境
   enabled: true # 是否启用追踪
 
+# JWT 配置
+jwt:
+  secret: "be0axSSXmguDZ2Q0EIPgRwq9e5G9nRH3zq3iEw6nllU="
+
 # Global logging - JSON格式
 logger:
   level: "all"

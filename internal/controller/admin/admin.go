@@ -352,12 +352,16 @@ func (*Controller) CreateAdmin(ctx context.Context, req *v1.CreateAdminReq) (res
 
 // generateJWTToken 生成JWT token
 func generateJWTToken(admin *entity.Admin) (string, error) {
-	// JWT密钥 (实际应该从配置文件获取)
-	jwtSecret := []byte("your-secret-key")
+	// 从配置文件获取JWT密钥
+	jwtSecret := g.Cfg().MustGet(context.Background(), "jwt.secret").String()
+	if jwtSecret == "" {
+		return "", fmt.Errorf("JWT secret not configured")
+	}
 
 	// 创建token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"admin_id": admin.Id,
+		"user_id":  admin.Id, // 使用 user_id 字段名，与 Gateway 的 Claims 结构体匹配
+		"admin_id": admin.Id, // 保留 admin_id 用于兼容
 		"username": admin.Username,
 		"site_id":  admin.SiteId,
 		"exp":      time.Now().Add(time.Hour * 24).Unix(), // 24小时过期
@@ -365,7 +369,7 @@ func generateJWTToken(admin *entity.Admin) (string, error) {
 	})
 
 	// 签名token
-	tokenString, err := token.SignedString(jwtSecret)
+	tokenString, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
 		return "", err
 	}
