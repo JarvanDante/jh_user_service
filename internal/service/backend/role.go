@@ -12,6 +12,9 @@ import (
 type (
 	IRole interface {
 		GetRoleList(ctx context.Context, req *v1.GetRoleListReq) (*v1.GetRoleListRes, error)
+		CreateRole(ctx context.Context, req *v1.CreateRoleReq) (*v1.CreateRoleRes, error)
+		UpdateRole(ctx context.Context, req *v1.UpdateRoleReq) (*v1.UpdateRoleRes, error)
+		DeleteRole(ctx context.Context, req *v1.DeleteRoleReq) (*v1.DeleteRoleRes, error)
 	}
 )
 

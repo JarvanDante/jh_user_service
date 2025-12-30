@@ -21,3 +21,18 @@ func Register(s *grpcx.GrpcServer) {
 func (*Controller) GetRoleList(ctx context.Context, req *v2.GetRoleListReq) (*v2.GetRoleListRes, error) {
 	return backend.Role().GetRoleList(ctx, req)
 }
+
+// CreateRole 创建角色
+func (*Controller) CreateRole(ctx context.Context, req *v2.CreateRoleReq) (*v2.CreateRoleRes, error) {
+	return backend.Role().CreateRole(ctx, req)
+}
+
+// UpdateRole 更新角色
+func (*Controller) UpdateRole(ctx context.Context, req *v2.UpdateRoleReq) (*v2.UpdateRoleRes, error) {
+	return backend.Role().UpdateRole(ctx, req)
+}
+
+// DeleteRole 删除角色
+func (*Controller) DeleteRole(ctx context.Context, req *v2.DeleteRoleReq) (*v2.DeleteRoleRes, error) {
+	return backend.Role().DeleteRole(ctx, req)
+}
