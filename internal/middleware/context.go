@@ -1,0 +1,50 @@
+package middleware
+
+import (
+	"context"
+)
+
+const (
+	AdminIdContextKey  = "admin_id"
+	ClientIPContextKey = "client_ip"
+)
+
+// GetAdminIdFromContext 从上下文中获取管理员ID
+// 优先从 gRPC metadata 获取，如果没有再从 context 获取
+func GetAdminIdFromContext(ctx context.Context) (uint, bool) {
+	// 首先尝试从 gRPC metadata 获取
+	if adminId, ok := GetAdminIdFromGRPCMetadata(ctx); ok {
+		return adminId, true
+	}
+
+	// 如果 gRPC metadata 中没有，尝试从 context 获取
+	if adminId, ok := ctx.Value(AdminIdContextKey).(uint); ok {
+		return adminId, true
+	}
+	return 0, false
+}
+
+// SetAdminIdToContext 将管理员ID设置到上下文中
+func SetAdminIdToContext(ctx context.Context, adminId uint) context.Context {
+	return context.WithValue(ctx, AdminIdContextKey, adminId)
+}
+
+// GetClientIPFromContext 从上下文中获取客户端IP
+// 优先从 gRPC metadata 获取，如果没有再从 context 获取
+func GetClientIPFromContext(ctx context.Context) string {
+	// 首先尝试从 gRPC metadata 获取
+	if ip := GetClientIPFromGRPCMetadata(ctx); ip != "127.0.0.1" {
+		return ip
+	}
+
+	// 如果 gRPC metadata 中没有，尝试从 context 获取
+	if ip, ok := ctx.Value(ClientIPContextKey).(string); ok {
+		return ip
+	}
+	return "127.0.0.1"
+}
+
+// SetClientIPToContext 将客户端IP设置到上下文中
+func SetClientIPToContext(ctx context.Context, ip string) context.Context {
+	return context.WithValue(ctx, ClientIPContextKey, ip)
+}

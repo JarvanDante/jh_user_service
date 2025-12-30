@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	v1 "jh_admin_service/api/backend/admin/v1"
 
 	"github.com/gogf/gf/v2/os/gtime"
 
@@ -10,11 +11,32 @@ import (
 	"jh_admin_service/internal/model/entity"
 )
 
-type sAdmin struct{}
+type (
+	IAdmin interface {
+		Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginRes, error)
+		RefreshToken(ctx context.Context, req *v1.RefreshTokenReq) (*v1.RefreshTokenRes, error)
+		CreateAdmin(ctx context.Context, req *v1.CreateAdminReq) (*v1.CreateAdminRes, error)
+		Logout(ctx context.Context, req *v1.LogoutReq) (*v1.LogoutRes, error)
+		ChangePassword(ctx context.Context, req *v1.ChangePasswordReq) (*v1.ChangePasswordRes, error)
+	}
+)
 
-func Admin() *sAdmin {
-	return &sAdmin{}
+var (
+	localAdmin IAdmin
+)
+
+func Admin() IAdmin {
+	if localAdmin == nil {
+		panic("implement not found for interface IAdmin, forgot register?")
+	}
+	return localAdmin
 }
+
+func RegisterAdmin(i IAdmin) {
+	localAdmin = i
+}
+
+type sAdmin struct{}
 
 // GetByUsername 根据用户名获取管理员
 func (s *sAdmin) GetByUsername(ctx context.Context, username string, siteId int) (*entity.Admin, error) {
