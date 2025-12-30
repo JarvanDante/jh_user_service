@@ -3,6 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"jh_admin_service/internal/controller/backend/admin"
+	"jh_admin_service/internal/controller/backend/role"
+	"jh_admin_service/internal/controller/backend/site"
 	"os"
 	"time"
 
@@ -11,9 +14,6 @@ import (
 	"github.com/gogf/gf/v2/os/gcmd"
 	"google.golang.org/grpc"
 
-	"jh_admin_service/internal/controller/admin"
-	"jh_admin_service/internal/controller/role"
-	"jh_admin_service/internal/controller/site"
 	"jh_admin_service/internal/middleware"
 	"jh_admin_service/internal/registry"
 	"jh_admin_service/internal/tracing"

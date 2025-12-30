@@ -2,10 +2,11 @@ package site
 
 import (
 	"context"
+	v1 "jh_admin_service/api/backend/site/v1"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-	v1 "jh_admin_service/api/site/v1"
-	"jh_admin_service/internal/service"
+	"github.com/gogf/gf/v2/errors/gcode"
+	"github.com/gogf/gf/v2/errors/gerror"
 )
 
 type Controller struct {
@@ -16,12 +17,10 @@ func Register(s *grpcx.GrpcServer) {
 	v1.RegisterSiteServer(s.Server, &Controller{})
 }
 
-// GetBasicSetting 获取站点基本设置 (gRPC)
 func (*Controller) GetBasicSetting(ctx context.Context, req *v1.GetBasicSettingReq) (res *v1.GetBasicSettingRes, err error) {
-	return service.Site().GetBasicSetting(ctx, req)
+	return nil, gerror.NewCode(gcode.CodeNotImplemented)
 }
 
-// UpdateBasicSetting 更新站点基本设置 (gRPC)
 func (*Controller) UpdateBasicSetting(ctx context.Context, req *v1.UpdateBasicSettingReq) (res *v1.UpdateBasicSettingRes, err error) {
-	return service.Site().UpdateBasicSetting(ctx, req)
+	return nil, gerror.NewCode(gcode.CodeNotImplemented)
 }

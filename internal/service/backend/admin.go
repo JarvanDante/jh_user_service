@@ -1,0 +1,94 @@
+package backend
+
+import (
+	"context"
+
+	"github.com/gogf/gf/v2/os/gtime"
+
+	"jh_admin_service/internal/dao"
+	"jh_admin_service/internal/model/do"
+	"jh_admin_service/internal/model/entity"
+)
+
+type sAdmin struct{}
+
+func Admin() *sAdmin {
+	return &sAdmin{}
+}
+
+// GetByUsername 根据用户名获取管理员
+func (s *sAdmin) GetByUsername(ctx context.Context, username string, siteId int) (*entity.Admin, error) {
+	var admin *entity.Admin
+	err := dao.Admin.Ctx(ctx).Where(do.Admin{
+		Username: username,
+		SiteId:   siteId,
+		Status:   1, // 正常状态
+	}).Scan(&admin)
+
+	return admin, err
+}
+
+// GetById 根据ID获取管理员
+func (s *sAdmin) GetById(ctx context.Context, id uint) (*entity.Admin, error) {
+	var admin *entity.Admin
+	err := dao.Admin.Ctx(ctx).Where(do.Admin{
+		Id:     id,
+		Status: 1, // 正常状态
+	}).Scan(&admin)
+
+	return admin, err
+}
+
+// UpdateLastLoginInfo 更新最后登录信息
+func (s *sAdmin) UpdateLastLoginInfo(ctx context.Context, adminId uint, ip string) error {
+	_, err := dao.Admin.Ctx(ctx).Where(do.Admin{Id: adminId}).Update(do.Admin{
+		LastLoginIp:   ip,
+		LastLoginTime: gtime.Now(),
+	})
+	return err
+}
+
+// AddLog 添加管理员操作日志
+func (s *sAdmin) AddLog(ctx context.Context, admin *entity.Admin, message string, ip string) error {
+	_, err := dao.AdminLog.Ctx(ctx).Insert(do.AdminLog{
+		SiteId:        admin.SiteId,
+		AdminId:       int(admin.Id),
+		AdminUsername: admin.Username,
+		Ip:            ip,
+		Remark:        message,
+		CreatedAt:     gtime.Now(),
+	})
+	return err
+}
+
+// CreateAdmin 创建管理员
+func (s *sAdmin) CreateAdmin(ctx context.Context, siteId int, username, nickname, password string, roleId, status int) error {
+	// 插入管理员记录
+	_, err := dao.Admin.Ctx(ctx).Insert(do.Admin{
+		SiteId:      siteId,
+		Username:    username,
+		Nickname:    nickname,
+		Password:    password, // 密码应该已经在控制器中加密
+		AdminRoleId: roleId,
+		Status:      status,
+		CreatedAt:   gtime.Now(),
+		UpdatedAt:   gtime.Now(),
+	})
+
+	return err
+}
+
+// CheckUsernameExists 检查用户名是否已存在
+func (s *sAdmin) CheckUsernameExists(ctx context.Context, username string, siteId int) (bool, error) {
+	var admin *entity.Admin
+	err := dao.Admin.Ctx(ctx).Where(do.Admin{
+		Username: username,
+		SiteId:   siteId,
+	}).Scan(&admin)
+
+	if err != nil {
+		return false, err
+	}
+
+	return admin != nil, nil
+}

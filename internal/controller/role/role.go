@@ -2,23 +2,21 @@ package role
 
 import (
 	"context"
+	v1 "jh_admin_service/api/backend/role/v1"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-
-	v1 "jh_admin_service/api/role/v1"
-	"jh_admin_service/internal/service"
+	"github.com/gogf/gf/v2/errors/gcode"
+	"github.com/gogf/gf/v2/errors/gerror"
 )
 
 type Controller struct {
 	v1.UnimplementedRoleServer
 }
 
-// Register 注册角色服务
 func Register(s *grpcx.GrpcServer) {
 	v1.RegisterRoleServer(s.Server, &Controller{})
 }
 
-// GetRoleList 获取角色列表
-func (*Controller) GetRoleList(ctx context.Context, req *v1.GetRoleListReq) (*v1.GetRoleListRes, error) {
-	return service.Role().GetRoleList(ctx, req)
+func (*Controller) GetRoleList(ctx context.Context, req *v1.GetRoleListReq) (res *v1.GetRoleListRes, err error) {
+	return nil, gerror.NewCode(gcode.CodeNotImplemented)
 }
