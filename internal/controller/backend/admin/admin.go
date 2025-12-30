@@ -31,6 +31,21 @@ func (*Controller) CreateAdmin(ctx context.Context, req *v2.CreateAdminReq) (res
 	return backend.Admin().CreateAdmin(ctx, req)
 }
 
+// GetAdminList 获取管理员列表
+func (*Controller) GetAdminList(ctx context.Context, req *v2.GetAdminListReq) (res *v2.GetAdminListRes, err error) {
+	return backend.Admin().GetAdminList(ctx, req)
+}
+
+// UpdateAdmin 更新管理员
+func (*Controller) UpdateAdmin(ctx context.Context, req *v2.UpdateAdminReq) (res *v2.UpdateAdminRes, err error) {
+	return backend.Admin().UpdateAdmin(ctx, req)
+}
+
+// DeleteAdmin 删除管理员
+func (*Controller) DeleteAdmin(ctx context.Context, req *v2.DeleteAdminReq) (res *v2.DeleteAdminRes, err error) {
+	return backend.Admin().DeleteAdmin(ctx, req)
+}
+
 // Logout 退出登录
 func (*Controller) Logout(ctx context.Context, req *v2.LogoutReq) (res *v2.LogoutRes, err error) {
 	return backend.Admin().Logout(ctx, req)

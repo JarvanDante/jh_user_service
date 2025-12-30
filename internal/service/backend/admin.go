@@ -15,7 +15,10 @@ type (
 	IAdmin interface {
 		Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginRes, error)
 		RefreshToken(ctx context.Context, req *v1.RefreshTokenReq) (*v1.RefreshTokenRes, error)
+		GetAdminList(ctx context.Context, req *v1.GetAdminListReq) (*v1.GetAdminListRes, error)
 		CreateAdmin(ctx context.Context, req *v1.CreateAdminReq) (*v1.CreateAdminRes, error)
+		UpdateAdmin(ctx context.Context, req *v1.UpdateAdminReq) (*v1.UpdateAdminRes, error)
+		DeleteAdmin(ctx context.Context, req *v1.DeleteAdminReq) (*v1.DeleteAdminRes, error)
 		Logout(ctx context.Context, req *v1.LogoutReq) (*v1.LogoutRes, error)
 		ChangePassword(ctx context.Context, req *v1.ChangePasswordReq) (*v1.ChangePasswordRes, error)
 	}

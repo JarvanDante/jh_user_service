@@ -175,24 +175,111 @@ func (s *sAdmin) Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginRes, err
 
 // RefreshToken 刷新令牌
 func (s *sAdmin) RefreshToken(ctx context.Context, req *v1.RefreshTokenReq) (*v1.RefreshTokenRes, error) {
+	// 创建Jaeger span
+	ctx, span := tracing.StartSpan(ctx, "admin.RefreshToken", trace.WithAttributes(
+		attribute.String("method", "RefreshToken"),
+	))
+	defer span.End()
+
 	middleware.LogWithTrace(ctx, "info", "刷新token请求")
 
-	// 从上下文中获取当前用户信息 (需要中间件解析JWT)
-	// 这里简化处理，实际需要从JWT中解析用户信息
-
-	// 重新生成token
-	// admin := getCurrentAdmin(ctx)
-	// token, err := generateJWTToken(admin)
-	// if err != nil {
-	//     middleware.LogWithTrace(ctx, "error", "刷新token失败: %v", err)
-	//     return nil, fmt.Errorf("刷新token失败: %v", err)
-	// }
-
-	res := &v1.RefreshTokenRes{
-		Token: "new_token", // 临时返回
+	// 从上下文中获取当前管理员ID
+	adminId, exists := middleware.GetAdminIdFromContext(ctx)
+	if !exists {
+		tracing.AddSpanEvent(span, "admin_id_not_found")
+		middleware.LogWithTrace(ctx, "error", "无法获取管理员ID")
+		return nil, fmt.Errorf("未登录或登录已过期")
 	}
 
-	middleware.LogWithTrace(ctx, "info", "刷新token成功")
+	tracing.SetSpanAttributes(span, attribute.Int("admin_id", int(adminId)))
+	middleware.LogWithTrace(ctx, "info", "获取到管理员ID: %d", adminId)
+
+	// 查询管理员信息
+	ctx, querySpan := tracing.StartSpan(ctx, "db.query.admin", trace.WithAttributes(
+		attribute.String("db.operation", "select"),
+		attribute.String("db.table", "admin"),
+	))
+
+	var admin *entity.Admin
+	err := dao.Admin.Ctx(ctx).Where(do.Admin{Id: adminId}).Scan(&admin)
+	querySpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		tracing.SetSpanError(querySpan, err)
+		middleware.LogWithTrace(ctx, "error", "查询管理员信息失败: %v", err)
+		return nil, fmt.Errorf("查询管理员信息失败: %v", err)
+	}
+
+	if admin == nil {
+		tracing.AddSpanEvent(span, "admin_not_found", attribute.Int("admin_id", int(adminId)))
+		middleware.LogWithTrace(ctx, "warning", "管理员不存在 - ID: %d", adminId)
+		return nil, fmt.Errorf("管理员不存在")
+	}
+
+	// 检查管理员状态
+	if admin.Status != 1 {
+		tracing.AddSpanEvent(span, "admin_status_invalid",
+			attribute.Int("admin_id", int(adminId)),
+			attribute.Int("status", admin.Status),
+		)
+		middleware.LogWithTrace(ctx, "warning", "管理员状态异常 - ID: %d, 状态: %d", adminId, admin.Status)
+		return nil, fmt.Errorf("账号已被禁用")
+	}
+
+	// 生成新的JWT token
+	ctx, tokenSpan := tracing.StartSpan(ctx, "auth.generate_jwt_token")
+	token, err := s.generateJWTToken(admin)
+	tokenSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		tracing.SetSpanError(tokenSpan, err)
+		middleware.LogWithTrace(ctx, "error", "生成token失败: %v", err)
+		return nil, fmt.Errorf("生成token失败: %v", err)
+	}
+
+	// 更新最后活跃时间（可选）
+	ctx, updateSpan := tracing.StartSpan(ctx, "db.update.admin_last_active", trace.WithAttributes(
+		attribute.String("db.operation", "update"),
+		attribute.String("db.table", "admin"),
+	))
+	_, err = dao.Admin.Ctx(ctx).Where(do.Admin{Id: adminId}).Update(do.Admin{
+		UpdatedAt: gtime.Now(),
+	})
+	updateSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(updateSpan, err)
+		middleware.LogWithTrace(ctx, "error", "更新管理员活跃时间失败: %v", err)
+		// 这个错误不影响token刷新，只记录日志
+	}
+
+	// 记录刷新日志
+	ctx, logSpan := tracing.StartSpan(ctx, "db.insert.admin_log", trace.WithAttributes(
+		attribute.String("db.operation", "insert"),
+		attribute.String("db.table", "admin_log"),
+	))
+	err = s.addAdminLog(ctx, admin, "刷新token")
+	logSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(logSpan, err)
+		middleware.LogWithTrace(ctx, "error", "记录刷新日志失败: %v", err)
+		// 这个错误不影响token刷新，只记录日志
+	}
+
+	res := &v1.RefreshTokenRes{
+		Token: token,
+	}
+
+	tracing.AddSpanEvent(span, "token_refresh_success",
+		attribute.Int("admin_id", int(adminId)),
+		attribute.String("username", admin.Username),
+	)
+	tracing.SetSpanAttributes(span, attribute.Bool("success", true))
+
+	middleware.LogWithTrace(ctx, "info", "刷新token成功 - 管理员ID: %d, 用户名: %s", adminId, admin.Username)
 	return res, nil
 }
 
@@ -212,41 +299,11 @@ func (s *sAdmin) CreateAdmin(ctx context.Context, req *v1.CreateAdminReq) (*v1.C
 
 	middleware.LogWithTrace(ctx, "info", "创建管理员请求 - 用户名: %s, 昵称: %s", req.Username, req.Nickname)
 
-	// 验证参数
-	if req.Username == "" || req.Password == "" || req.Nickname == "" {
-		tracing.AddSpanEvent(span, "validation_failed", attribute.String("reason", "missing_required_fields"))
-		middleware.LogWithTrace(ctx, "error", "创建管理员参数验证失败 - 缺少必要字段")
-		return nil, fmt.Errorf("用户名、密码和昵称不能为空")
-	}
-
-	// 验证用户名长度和格式
-	if len(req.Username) < 4 || len(req.Username) > 12 {
-		tracing.AddSpanEvent(span, "validation_failed",
-			attribute.String("reason", "username_length_invalid"),
-			attribute.Int("username_length", len(req.Username)),
-		)
-		middleware.LogWithTrace(ctx, "error", "创建管理员参数验证失败 - 用户名长度不符合要求: %d", len(req.Username))
-		return nil, fmt.Errorf("用户名长度必须在4-12个字符之间")
-	}
-
-	// 验证密码长度
-	if len(req.Password) < 6 || len(req.Password) > 20 {
-		tracing.AddSpanEvent(span, "validation_failed",
-			attribute.String("reason", "password_length_invalid"),
-			attribute.Int("password_length", len(req.Password)),
-		)
-		middleware.LogWithTrace(ctx, "error", "创建管理员参数验证失败 - 密码长度不符合要求: %d", len(req.Password))
-		return nil, fmt.Errorf("密码长度必须在6-20个字符之间")
-	}
-
-	// 验证昵称长度
-	if len(req.Nickname) < 2 || len(req.Nickname) > 20 {
-		tracing.AddSpanEvent(span, "validation_failed",
-			attribute.String("reason", "nickname_length_invalid"),
-			attribute.Int("nickname_length", len(req.Nickname)),
-		)
-		middleware.LogWithTrace(ctx, "error", "创建管理员参数验证失败 - 昵称长度不符合要求: %d", len(req.Nickname))
-		return nil, fmt.Errorf("昵称长度必须在2-20个字符之间")
+	// 手动验证参数 - 不依赖 protobuf 验证标签
+	if err := s.validateCreateAdminRequest(req); err != nil {
+		tracing.AddSpanEvent(span, "validation_failed", attribute.String("reason", err.Error()))
+		middleware.LogWithTrace(ctx, "error", "创建管理员参数验证失败: %v", err)
+		return nil, err
 	}
 
 	// 检查用户名是否已存在
@@ -346,6 +403,373 @@ func (s *sAdmin) CreateAdmin(ctx context.Context, req *v1.CreateAdminReq) (*v1.C
 	// err = s.addAdminLog(ctx, currentAdmin, "添加员工："+req.Username)
 
 	res := &v1.CreateAdminRes{}
+	return res, nil
+}
+
+// validateCreateAdminRequest 验证创建管理员请求参数
+func (s *sAdmin) validateCreateAdminRequest(req *v1.CreateAdminReq) error {
+	// 验证必填字段
+	if req.Username == "" {
+		return fmt.Errorf("用户名不能为空")
+	}
+	if req.Password == "" {
+		return fmt.Errorf("密码不能为空")
+	}
+	if req.Nickname == "" {
+		return fmt.Errorf("昵称不能为空")
+	}
+
+	// 验证用户名长度和格式
+	if len(req.Username) < 4 || len(req.Username) > 12 {
+		return fmt.Errorf("用户名长度必须在4-12个字符之间")
+	}
+
+	// 验证密码长度
+	if len(req.Password) < 6 || len(req.Password) > 20 {
+		return fmt.Errorf("密码长度必须在6-20个字符之间")
+	}
+
+	// 验证昵称长度
+	if len(req.Nickname) < 2 || len(req.Nickname) > 20 {
+		return fmt.Errorf("昵称长度必须在2-20个字符之间")
+	}
+
+	// 验证角色
+	if req.Role <= 0 {
+		return fmt.Errorf("请选择有效的角色")
+	}
+
+	// 验证状态
+	if req.Status < 0 || req.Status > 1 {
+		return fmt.Errorf("状态值无效")
+	}
+
+	return nil
+}
+
+// GetAdminList 获取管理员列表
+func (s *sAdmin) GetAdminList(ctx context.Context, req *v1.GetAdminListReq) (*v1.GetAdminListRes, error) {
+	// 创建Jaeger span
+	ctx, span := tracing.StartSpan(ctx, "admin.GetAdminList", trace.WithAttributes(
+		attribute.String("method", "GetAdminList"),
+	))
+	defer span.End()
+
+	// 获取站点ID
+	siteId := 1 // 临时硬编码，实际应该从请求中获取
+	tracing.SetSpanAttributes(span, attribute.Int("site_id", siteId))
+
+	middleware.LogWithTrace(ctx, "info", "获取管理员列表请求 - 用户名: %s, 状态: %d, 页码: %d, 大小: %d",
+		req.Username, req.Status, req.Page, req.Size)
+
+	// 设置默认分页参数
+	page := int(req.Page)
+	size := int(req.Size)
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 10
+	}
+
+	// 构建查询条件
+	query := dao.Admin.Ctx(ctx).Where("site_id = ?", siteId)
+
+	if req.Username != "" {
+		query = query.Where("username LIKE ?", "%"+req.Username+"%")
+	}
+
+	if req.Status > 0 {
+		query = query.Where("status = ?", req.Status)
+	}
+
+	// 查询总数
+	ctx, countSpan := tracing.StartSpan(ctx, "db.query.admin_count", trace.WithAttributes(
+		attribute.String("db.operation", "count"),
+		attribute.String("db.table", "admin"),
+	))
+
+	total, err := query.Count()
+	countSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		tracing.SetSpanError(countSpan, err)
+		middleware.LogWithTrace(ctx, "error", "查询管理员总数失败: %v", err)
+		return nil, fmt.Errorf("查询管理员总数失败: %v", err)
+	}
+
+	// 查询列表数据
+	ctx, listSpan := tracing.StartSpan(ctx, "db.query.admin_list", trace.WithAttributes(
+		attribute.String("db.operation", "select"),
+		attribute.String("db.table", "admin"),
+	))
+
+	var admins []*entity.Admin
+	err = query.Page(page, size).OrderDesc("id").Scan(&admins)
+	listSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		tracing.SetSpanError(listSpan, err)
+		middleware.LogWithTrace(ctx, "error", "查询管理员列表失败: %v", err)
+		return nil, fmt.Errorf("查询管理员列表失败: %v", err)
+	}
+
+	// 转换为响应格式
+	var adminList []*v1.AdminInfo
+	for _, admin := range admins {
+		adminInfo := &v1.AdminInfo{
+			Id:       int32(admin.Id),
+			Username: admin.Username,
+			Nickname: admin.Nickname,
+			Role:     int32(admin.AdminRoleId),
+			Status:   int32(admin.Status),
+		}
+
+		// 格式化时间
+		if admin.LastLoginTime != nil {
+			adminInfo.LastLoginTime = admin.LastLoginTime.Format("2006-01-02 15:04:05")
+		}
+		if admin.CreatedAt != nil {
+			adminInfo.CreatedAt = admin.CreatedAt.Format("2006-01-02 15:04:05")
+		}
+		if admin.LastLoginIp != "" {
+			adminInfo.LastLoginIp = admin.LastLoginIp
+		}
+
+		adminList = append(adminList, adminInfo)
+	}
+
+	// TODO: 获取操作二次验证权限
+	// google2faAccess := AdminRole::validRolePermission($this->admin->admin_role_id, 'bind-google2fa');
+
+	res := &v1.GetAdminListRes{
+		List:            adminList,
+		Total:           int32(total),
+		Page:            int32(page),
+		Size:            int32(size),
+		Google2FaAccess: false, // 暂时设为false，需要实现权限检查
+	}
+
+	tracing.SetSpanAttributes(span, attribute.Bool("success", true))
+	middleware.LogWithTrace(ctx, "info", "获取管理员列表成功 - 总数: %d, 当前页: %d", total, page)
+
+	return res, nil
+}
+
+// UpdateAdmin 更新管理员
+func (s *sAdmin) UpdateAdmin(ctx context.Context, req *v1.UpdateAdminReq) (*v1.UpdateAdminRes, error) {
+	// 创建Jaeger span
+	ctx, span := tracing.StartSpan(ctx, "admin.UpdateAdmin", trace.WithAttributes(
+		attribute.Int("admin_id", int(req.Id)),
+		attribute.String("method", "UpdateAdmin"),
+	))
+	defer span.End()
+
+	// 获取站点ID
+	siteId := 1 // 临时硬编码，实际应该从请求中获取
+	tracing.SetSpanAttributes(span, attribute.Int("site_id", siteId))
+
+	middleware.LogWithTrace(ctx, "info", "更新管理员请求 - ID: %d", req.Id)
+
+	if req.Id <= 0 {
+		tracing.AddSpanEvent(span, "validation_failed", attribute.String("reason", "invalid_admin_id"))
+		middleware.LogWithTrace(ctx, "error", "更新管理员参数验证失败 - 无效的管理员ID: %d", req.Id)
+		return nil, fmt.Errorf("无效的管理员ID")
+	}
+
+	// 验证参数
+	if req.Password != "" && (len(req.Password) < 6 || len(req.Password) > 20) {
+		tracing.AddSpanEvent(span, "validation_failed", attribute.String("reason", "password_length_invalid"))
+		middleware.LogWithTrace(ctx, "error", "更新管理员参数验证失败 - 密码长度不符合要求")
+		return nil, fmt.Errorf("密码长度必须在6-20个字符之间")
+	}
+
+	if req.Nickname != "" && (len(req.Nickname) < 2 || len(req.Nickname) > 20) {
+		tracing.AddSpanEvent(span, "validation_failed", attribute.String("reason", "nickname_length_invalid"))
+		middleware.LogWithTrace(ctx, "error", "更新管理员参数验证失败 - 昵称长度不符合要求")
+		return nil, fmt.Errorf("昵称长度必须在2-20个字符之间")
+	}
+
+	// 检查管理员是否存在
+	ctx, checkSpan := tracing.StartSpan(ctx, "db.query.check_admin_exists", trace.WithAttributes(
+		attribute.String("db.operation", "select"),
+		attribute.String("db.table", "admin"),
+	))
+
+	var admin *entity.Admin
+	err := dao.Admin.Ctx(ctx).Where(do.Admin{
+		Id:     int(req.Id),
+		SiteId: siteId,
+	}).Scan(&admin)
+
+	checkSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		tracing.SetSpanError(checkSpan, err)
+		middleware.LogWithTrace(ctx, "error", "查询管理员信息失败: %v", err)
+		return nil, fmt.Errorf("查询管理员信息失败: %v", err)
+	}
+
+	if admin == nil {
+		tracing.AddSpanEvent(span, "admin_not_found", attribute.Int("admin_id", int(req.Id)))
+		middleware.LogWithTrace(ctx, "warning", "管理员不存在 - ID: %d", req.Id)
+		return nil, fmt.Errorf("管理员不存在")
+	}
+
+	// 构建更新数据
+	updateData := do.Admin{
+		UpdatedAt: gtime.Now(),
+	}
+
+	if req.Password != "" {
+		// 加密密码
+		ctx, hashSpan := tracing.StartSpan(ctx, "auth.hash_password")
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		hashSpan.End()
+
+		if err != nil {
+			tracing.SetSpanError(span, err)
+			tracing.SetSpanError(hashSpan, err)
+			middleware.LogWithTrace(ctx, "error", "密码加密失败: %v", err)
+			return nil, fmt.Errorf("密码加密失败: %v", err)
+		}
+		updateData.Password = string(hashedPassword)
+	}
+
+	if req.Nickname != "" {
+		updateData.Nickname = req.Nickname
+	}
+
+	if req.Role > 0 {
+		updateData.AdminRoleId = int(req.Role)
+	}
+
+	if req.Status >= 0 {
+		updateData.Status = int(req.Status)
+	}
+
+	// 更新管理员
+	ctx, updateSpan := tracing.StartSpan(ctx, "db.update.admin", trace.WithAttributes(
+		attribute.String("db.operation", "update"),
+		attribute.String("db.table", "admin"),
+	))
+
+	_, err = dao.Admin.Ctx(ctx).Where(do.Admin{Id: int(req.Id)}).Update(updateData)
+	updateSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		tracing.SetSpanError(updateSpan, err)
+		middleware.LogWithTrace(ctx, "error", "更新管理员失败: %v", err)
+		return nil, fmt.Errorf("更新管理员失败: %v", err)
+	}
+
+	tracing.AddSpanEvent(span, "admin_updated_successfully", attribute.Int("admin_id", int(req.Id)))
+	tracing.SetSpanAttributes(span, attribute.Bool("success", true))
+
+	middleware.LogWithTrace(ctx, "info", "更新管理员成功 - ID: %d, 用户名: %s", req.Id, admin.Username)
+
+	// 记录操作日志
+	err = s.addAdminLog(ctx, admin, "编辑员工："+admin.Username)
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "记录操作日志失败: %v", err)
+	}
+
+	res := &v1.UpdateAdminRes{}
+	return res, nil
+}
+
+// DeleteAdmin 删除管理员
+func (s *sAdmin) DeleteAdmin(ctx context.Context, req *v1.DeleteAdminReq) (*v1.DeleteAdminRes, error) {
+	// 创建Jaeger span
+	ctx, span := tracing.StartSpan(ctx, "admin.DeleteAdmin", trace.WithAttributes(
+		attribute.Int("admin_id", int(req.Id)),
+		attribute.String("method", "DeleteAdmin"),
+	))
+	defer span.End()
+
+	// 获取站点ID
+	siteId := 1 // 临时硬编码，实际应该从请求中获取
+	tracing.SetSpanAttributes(span, attribute.Int("site_id", siteId))
+
+	middleware.LogWithTrace(ctx, "info", "删除管理员请求 - ID: %d", req.Id)
+
+	if req.Id <= 0 {
+		tracing.AddSpanEvent(span, "validation_failed", attribute.String("reason", "invalid_admin_id"))
+		middleware.LogWithTrace(ctx, "error", "删除管理员参数验证失败 - 无效的管理员ID: %d", req.Id)
+		return nil, fmt.Errorf("无效的管理员ID")
+	}
+
+	// 获取当前操作的管理员ID，防止自己删除自己
+	currentAdminId, exists := middleware.GetAdminIdFromContext(ctx)
+	if exists && currentAdminId == uint(req.Id) {
+		tracing.AddSpanEvent(span, "validation_failed", attribute.String("reason", "cannot_delete_self"))
+		middleware.LogWithTrace(ctx, "warning", "不能删除自己 - 当前管理员ID: %d, 要删除的ID: %d", currentAdminId, req.Id)
+		return nil, fmt.Errorf("不能删除自己")
+	}
+
+	// 检查管理员是否存在
+	ctx, checkSpan := tracing.StartSpan(ctx, "db.query.check_admin_exists", trace.WithAttributes(
+		attribute.String("db.operation", "select"),
+		attribute.String("db.table", "admin"),
+	))
+
+	var admin *entity.Admin
+	err := dao.Admin.Ctx(ctx).Where(do.Admin{
+		Id:     int(req.Id),
+		SiteId: siteId,
+	}).Scan(&admin)
+
+	checkSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		tracing.SetSpanError(checkSpan, err)
+		middleware.LogWithTrace(ctx, "error", "查询管理员信息失败: %v", err)
+		return nil, fmt.Errorf("查询管理员信息失败: %v", err)
+	}
+
+	if admin == nil {
+		tracing.AddSpanEvent(span, "admin_not_found", attribute.Int("admin_id", int(req.Id)))
+		middleware.LogWithTrace(ctx, "warning", "管理员不存在 - ID: %d", req.Id)
+		return nil, fmt.Errorf("管理员不存在")
+	}
+
+	// 软删除管理员 (设置 delete_at 字段)
+	ctx, deleteSpan := tracing.StartSpan(ctx, "db.update.admin_soft_delete", trace.WithAttributes(
+		attribute.String("db.operation", "update"),
+		attribute.String("db.table", "admin"),
+	))
+
+	_, err = dao.Admin.Ctx(ctx).Where(do.Admin{Id: int(req.Id)}).Update(do.Admin{
+		DeleteAt:  gtime.Now(),
+		UpdatedAt: gtime.Now(),
+	})
+
+	deleteSpan.End()
+
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		tracing.SetSpanError(deleteSpan, err)
+		middleware.LogWithTrace(ctx, "error", "删除管理员失败: %v", err)
+		return nil, fmt.Errorf("删除管理员失败: %v", err)
+	}
+
+	tracing.AddSpanEvent(span, "admin_deleted_successfully", attribute.Int("admin_id", int(req.Id)))
+	tracing.SetSpanAttributes(span, attribute.Bool("success", true))
+
+	middleware.LogWithTrace(ctx, "info", "删除管理员成功 - ID: %d, 用户名: %s", req.Id, admin.Username)
+
+	// 记录操作日志
+	err = s.addAdminLog(ctx, admin, "删除员工："+admin.Username)
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "记录操作日志失败: %v", err)
+	}
+
+	res := &v1.DeleteAdminRes{}
 	return res, nil
 }
 
