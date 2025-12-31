@@ -36,3 +36,13 @@ func (*Controller) UpdateRole(ctx context.Context, req *v2.UpdateRoleReq) (*v2.U
 func (*Controller) DeleteRole(ctx context.Context, req *v2.DeleteRoleReq) (*v2.DeleteRoleRes, error) {
 	return backend.Role().DeleteRole(ctx, req)
 }
+
+// GetPermissions 获取权限列表
+func (*Controller) GetPermissions(ctx context.Context, req *v2.GetPermissionsReq) (*v2.GetPermissionsRes, error) {
+	return backend.Role().GetPermissions(ctx, req)
+}
+
+// SavePermission 保存权限
+func (*Controller) SavePermission(ctx context.Context, req *v2.SavePermissionReq) (*v2.SavePermissionRes, error) {
+	return backend.Role().SavePermission(ctx, req)
+}

@@ -15,6 +15,8 @@ type (
 		CreateRole(ctx context.Context, req *v1.CreateRoleReq) (*v1.CreateRoleRes, error)
 		UpdateRole(ctx context.Context, req *v1.UpdateRoleReq) (*v1.UpdateRoleRes, error)
 		DeleteRole(ctx context.Context, req *v1.DeleteRoleReq) (*v1.DeleteRoleRes, error)
+		GetPermissions(ctx context.Context, req *v1.GetPermissionsReq) (*v1.GetPermissionsRes, error)
+		SavePermission(ctx context.Context, req *v1.SavePermissionReq) (*v1.SavePermissionRes, error)
 	}
 )
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"jh_admin_service/api/backend/role/v1"
 	"jh_admin_service/internal/service/backend"
+	"strconv"
+	"strings"
 
 	"jh_admin_service/internal/dao"
 	"jh_admin_service/internal/middleware"
@@ -296,4 +298,172 @@ func (s *sRole) DeleteRole(ctx context.Context, req *v1.DeleteRoleReq) (*v1.Dele
 		Success: true,
 		Message: "删除成功",
 	}, nil
+}
+
+// GetPermissions 获取权限列表
+func (s *sRole) GetPermissions(ctx context.Context, req *v1.GetPermissionsReq) (*v1.GetPermissionsRes, error) {
+	middleware.LogWithTrace(ctx, "info", "获取权限列表请求 - SiteId: %d", req.SiteId)
+
+	// 默认站点ID为1
+	siteId := int32(1)
+	if req.SiteId > 0 {
+		siteId = req.SiteId
+	}
+
+	// 获取角色列表及其权限
+	var roles []*entity.AdminRole
+	err := dao.AdminRole.Ctx(ctx).Where(do.AdminRole{
+		SiteId: siteId,
+		Status: 1, // 只查询启用的角色
+	}).OrderAsc(dao.AdminRole.Columns().Id).Scan(&roles)
+
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "查询角色列表失败: %v", err)
+		return nil, fmt.Errorf("查询角色列表失败: %v", err)
+	}
+
+	// 构建角色权限列表
+	var roleList []*v1.RolePermissionInfo
+	for _, role := range roles {
+		permissionList := []string{}
+		if role.Permissions != "" {
+			permissionList = strings.Split(role.Permissions, ",")
+		}
+
+		roleInfo := &v1.RolePermissionInfo{
+			Id:             int32(role.Id),
+			Name:           role.Name,
+			PermissionList: permissionList,
+		}
+		roleList = append(roleList, roleInfo)
+	}
+
+	// 获取权限树列表
+	var permissions []*entity.AdminPermission
+	err = dao.AdminPermission.Ctx(ctx).Where(do.AdminPermission{
+		Status: 1, // 只查询启用的权限
+	}).OrderAsc(dao.AdminPermission.Columns().ParentId).
+		OrderAsc(dao.AdminPermission.Columns().Sort).Scan(&permissions)
+
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "查询权限列表失败: %v", err)
+		return nil, fmt.Errorf("查询权限列表失败: %v", err)
+	}
+
+	// 构建权限树
+	permissionTree := s.buildPermissionTree(permissions, 0)
+
+	middleware.LogWithTrace(ctx, "info", "获取权限列表成功 - SiteId: %d, 角色数量: %d, 权限数量: %d",
+		siteId, len(roleList), len(permissions))
+
+	return &v1.GetPermissionsRes{
+		PermissionList: permissionTree,
+		RoleList:       roleList,
+	}, nil
+}
+
+// SavePermission 保存权限
+func (s *sRole) SavePermission(ctx context.Context, req *v1.SavePermissionReq) (*v1.SavePermissionRes, error) {
+	middleware.LogWithTrace(ctx, "info", "保存权限请求 - Id: %d, SiteId: %d, PermissionList: %s",
+		req.Id, req.SiteId, req.PermissionList)
+
+	// 参数验证
+	if req.Id <= 0 {
+		return &v1.SavePermissionRes{
+			Success: false,
+			Message: "角色ID无效",
+		}, nil
+	}
+
+	// 默认站点ID为1
+	siteId := int32(1)
+	if req.SiteId > 0 {
+		siteId = req.SiteId
+	}
+
+	// 检查角色是否存在
+	var role *entity.AdminRole
+	err := dao.AdminRole.Ctx(ctx).Where(do.AdminRole{
+		Id:     req.Id,
+		SiteId: siteId,
+	}).Scan(&role)
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "查询角色失败: %v", err)
+		return &v1.SavePermissionRes{
+			Success: false,
+			Message: "系统错误，请稍后重试",
+		}, nil
+	}
+
+	if role == nil {
+		return &v1.SavePermissionRes{
+			Success: false,
+			Message: "角色不存在",
+		}, nil
+	}
+
+	// 验证权限ID格式
+	permissionList := strings.TrimSpace(req.PermissionList)
+	if permissionList != "" {
+		permissionIds := strings.Split(permissionList, ",")
+		for _, idStr := range permissionIds {
+			if _, err := strconv.Atoi(strings.TrimSpace(idStr)); err != nil {
+				return &v1.SavePermissionRes{
+					Success: false,
+					Message: "权限ID格式错误",
+				}, nil
+			}
+		}
+	}
+
+	// 更新角色权限
+	_, err = dao.AdminRole.Ctx(ctx).Where(do.AdminRole{
+		Id:     req.Id,
+		SiteId: siteId,
+	}).Data(do.AdminRole{
+		Permissions: permissionList,
+	}).Update()
+
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", "保存权限失败: %v", err)
+		return &v1.SavePermissionRes{
+			Success: false,
+			Message: "保存权限失败",
+		}, nil
+	}
+
+	middleware.LogWithTrace(ctx, "info", "保存权限成功 - Id: %d, Name: %s, PermissionList: %s",
+		req.Id, role.Name, permissionList)
+
+	return &v1.SavePermissionRes{
+		Success: true,
+		Message: "保存成功",
+	}, nil
+}
+
+// buildPermissionTree 构建权限树
+func (s *sRole) buildPermissionTree(permissions []*entity.AdminPermission, parentId int) []*v1.PermissionInfo {
+	var tree []*v1.PermissionInfo
+
+	for _, permission := range permissions {
+		if permission.ParentId == parentId {
+			permissionInfo := &v1.PermissionInfo{
+				Id:          int32(permission.Id),
+				ParentId:    int32(permission.ParentId),
+				Type:        int32(permission.Type),
+				Name:        permission.Name,
+				BackendUrl:  permission.BackendUrl,
+				FrontendUrl: permission.FrontendUrl,
+				Open:        permission.Type == 1, // 菜单类型默认展开
+				Checked:     false,
+			}
+
+			// 递归构建子权限
+			permissionInfo.Children = s.buildPermissionTree(permissions, int(permission.Id))
+
+			tree = append(tree, permissionInfo)
+		}
+	}
+
+	return tree
 }
