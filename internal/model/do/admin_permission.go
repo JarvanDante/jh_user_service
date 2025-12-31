@@ -12,14 +12,14 @@ import (
 // AdminPermission is the golang structure of table admin_permission for DAO operations like Where/Data.
 type AdminPermission struct {
 	g.Meta      `orm:"table:admin_permission, do:true"`
-	Id          interface{} // 权限ID
-	ParentId    interface{} // 父权限ID
-	Type        interface{} // 权限类型。1=菜单；2=操作权限
-	Name        interface{} // 权限名称
-	BackendUrl  interface{} // 后台URL
-	FrontendUrl interface{} // 前台URL
-	Status      interface{} // 状态。1=启用；0=禁用
-	Sort        interface{} // 排序
-	CreatedAt   *gtime.Time // 创建时间
-	UpdatedAt   *gtime.Time // 更新时间
+	Id          any         //
+	ParentId    any         // 父级id
+	Type        any         // 权限类型；1=菜单；2=操作权限
+	Name        any         // 权限名称
+	BackendUrl  any         // 后端url
+	FrontendUrl any         // 前端url
+	Status      any         // 状态。1=可用；0=禁用
+	Sort        any         // 排序。值越小，越靠前
+	CreatedAt   *gtime.Time //
+	UpdatedAt   *gtime.Time //
 }
