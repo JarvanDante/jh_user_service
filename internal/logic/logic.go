@@ -9,4 +9,5 @@ import (
 	_ "jh_admin_service/internal/logic/backend/role"
 	_ "jh_admin_service/internal/logic/backend/site"
 	_ "jh_admin_service/internal/logic/backend/upload"
+	_ "jh_admin_service/internal/logic/backend/user"
 )

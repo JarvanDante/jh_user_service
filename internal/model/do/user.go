@@ -40,7 +40,6 @@ type User struct {
 	SafeQuestion      any         // 密保问题
 	SafeAnswer        any         // 密保答案
 	ShowBeginnerGuide any         // 是否显示新手引导。1=显示；0=不显示
-	DeleteAt          any         // 是否删除。0=未删除；其他为删除时间戳
 	Remark            any         // 备注
 	CreatedAt         *gtime.Time //
 	UpdatedAt         *gtime.Time //

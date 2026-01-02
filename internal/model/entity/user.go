@@ -38,7 +38,6 @@ type User struct {
 	SafeQuestion      string      `json:"safeQuestion"      orm:"safe_question"       description:"密保问题"`
 	SafeAnswer        string      `json:"safeAnswer"        orm:"safe_answer"         description:"密保答案"`
 	ShowBeginnerGuide int         `json:"showBeginnerGuide" orm:"show_beginner_guide" description:"是否显示新手引导。1=显示；0=不显示"`
-	DeleteAt          uint        `json:"deleteAt"          orm:"delete_at"           description:"是否删除。0=未删除；其他为删除时间戳"`
 	Remark            string      `json:"remark"            orm:"remark"              description:"备注"`
 	CreatedAt         *gtime.Time `json:"createdAt"         orm:"created_at"          description:""`
 	UpdatedAt         *gtime.Time `json:"updatedAt"         orm:"updated_at"          description:""`

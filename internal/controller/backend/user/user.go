@@ -1,0 +1,32 @@
+package user
+
+import (
+	"context"
+	v1 "jh_admin_service/api/backend/user/v1"
+	"jh_admin_service/internal/service/backend"
+
+	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+)
+
+type Controller struct {
+	v1.UnimplementedUserServer
+}
+
+func Register(s *grpcx.GrpcServer) {
+	v1.RegisterUserServer(s.Server, &Controller{})
+}
+
+// GetUserList 获取用户列表
+func (*Controller) GetUserList(ctx context.Context, req *v1.GetUserListReq) (res *v1.GetUserListRes, err error) {
+	return backend.User().GetUserList(ctx, req)
+}
+
+// UpdateUser 更新用户信息
+func (*Controller) UpdateUser(ctx context.Context, req *v1.UpdateUserReq) (res *v1.UpdateUserRes, err error) {
+	return backend.User().UpdateUser(ctx, req)
+}
+
+// GetUserBasicInfo 获取用户基本信息
+func (*Controller) GetUserBasicInfo(ctx context.Context, req *v1.GetUserBasicInfoReq) (res *v1.GetUserBasicInfoRes, err error) {
+	return backend.User().GetUserBasicInfo(ctx, req)
+}

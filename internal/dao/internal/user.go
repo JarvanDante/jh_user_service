@@ -49,7 +49,6 @@ type UserColumns struct {
 	SafeQuestion      string // 密保问题
 	SafeAnswer        string // 密保答案
 	ShowBeginnerGuide string // 是否显示新手引导。1=显示；0=不显示
-	DeleteAt          string // 是否删除。0=未删除；其他为删除时间戳
 	Remark            string // 备注
 	CreatedAt         string //
 	UpdatedAt         string //
@@ -86,7 +85,6 @@ var userColumns = UserColumns{
 	SafeQuestion:      "safe_question",
 	SafeAnswer:        "safe_answer",
 	ShowBeginnerGuide: "show_beginner_guide",
-	DeleteAt:          "delete_at",
 	Remark:            "remark",
 	CreatedAt:         "created_at",
 	UpdatedAt:         "updated_at",
