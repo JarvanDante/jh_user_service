@@ -45,3 +45,8 @@ func (*Controller) SaveUserGrades(ctx context.Context, req *v1.SaveUserGradesReq
 func (*Controller) DeleteUserGrades(ctx context.Context, req *v1.DeleteUserGradesReq) (res *v1.DeleteUserGradesRes, err error) {
 	return backend.User().DeleteUserGrades(ctx, req)
 }
+
+// GetUserLoginLogs 获取用户登录日志
+func (*Controller) GetUserLoginLogs(ctx context.Context, req *v1.GetUserLoginLogsReq) (res *v1.GetUserLoginLogsRes, err error) {
+	return backend.User().GetUserLoginLogs(ctx, req)
+}

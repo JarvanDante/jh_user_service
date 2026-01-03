@@ -729,3 +729,139 @@ func (s *sUser) getUserCountByGrade(ctx context.Context, siteId, gradeId int) (i
 
 	return count, err
 }
+
+// GetUserLoginLogs 获取用户登录日志
+func (s *sUser) GetUserLoginLogs(ctx context.Context, req *v1.GetUserLoginLogsReq) (*v1.GetUserLoginLogsRes, error) {
+	// 参数验证
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	// 创建Jaeger span
+	ctx, span := tracing.StartSpan(ctx, "user.GetUserLoginLogs", trace.WithAttributes(
+		attribute.String("method", "GetUserLoginLogs"),
+		attribute.String("username", req.Username),
+		attribute.String("ip", req.Ip),
+		attribute.Int("page", int(req.Page)),
+		attribute.Int("size", int(req.Size)),
+	))
+	defer span.End()
+
+	// 获取站点ID
+	siteId := 1 // 默认站点ID
+	siteCode := g.Cfg().MustGet(ctx, "site.code", "site_1").String()
+	middleware.LogWithTrace(ctx, "info", fmt.Sprintf("配置的站点代码: %s", siteCode))
+
+	tracing.SetSpanAttributes(span, attribute.Int("site_id", siteId))
+
+	middleware.LogWithTrace(ctx, "info", fmt.Sprintf("开始查询用户登录日志，站点ID: %d, 页码: %d, 每页: %d", siteId, req.Page, req.Size))
+
+	// 设置默认分页参数
+	page := req.Page
+	size := req.Size
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 50
+	}
+
+	// 构建查询条件
+	query := dao.UserLoginLog.Ctx(ctx).Where("site_id = ?", siteId)
+
+	// 添加筛选条件
+	if req.Username != "" {
+		query = query.Where("username = ?", req.Username)
+	}
+	if req.Ip != "" {
+		query = query.Where("login_ip = ?", req.Ip)
+	}
+	if req.StartTime != "" {
+		query = query.Where("login_time >= ?", req.StartTime)
+	}
+	if req.EndTime != "" {
+		query = query.Where("login_time <= ?", req.EndTime)
+	}
+
+	// 获取总数
+	ctx, countSpan := tracing.StartSpan(ctx, "db.query.user_login_log_count", trace.WithAttributes(
+		attribute.String("db.operation", "count"),
+		attribute.String("db.table", "user_login_log"),
+	))
+	count, err := query.Count()
+	countSpan.End()
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", fmt.Sprintf("查询用户登录日志总数失败: %v", err))
+		return nil, fmt.Errorf("查询用户登录日志总数失败: %v", err)
+	}
+
+	middleware.LogWithTrace(ctx, "info", fmt.Sprintf("用户登录日志总数: %d", count))
+	tracing.SetSpanAttributes(span, attribute.Int("total_count", count))
+
+	// 分页查询
+	offset := (page - 1) * size
+	ctx, listSpan := tracing.StartSpan(ctx, "db.query.user_login_log_list", trace.WithAttributes(
+		attribute.String("db.operation", "select"),
+		attribute.String("db.table", "user_login_log"),
+		attribute.Int("limit", int(size)),
+		attribute.Int("offset", int(offset)),
+	))
+
+	var logs []*entity.UserLoginLog
+	err = query.Order("created_at DESC").
+		Limit(int(size)).
+		Offset(int(offset)).
+		Scan(&logs)
+	listSpan.End()
+
+	if err != nil {
+		middleware.LogWithTrace(ctx, "error", fmt.Sprintf("查询用户登录日志列表失败: %v", err))
+		return nil, fmt.Errorf("查询用户登录日志列表失败: %v", err)
+	}
+
+	middleware.LogWithTrace(ctx, "info", fmt.Sprintf("查询到 %d 条用户登录日志", len(logs)))
+
+	// 转换数据格式
+	var list []*v1.UserLoginLogInfo
+	for _, log := range logs {
+		deviceName := s.getDeviceName(log.Device)
+
+		logInfo := &v1.UserLoginLogInfo{
+			Id:           int32(log.Id),
+			UserId:       int32(log.UserId),
+			Username:     log.Username,
+			RefererUrl:   log.RefererUrl,
+			LoginUrl:     log.LoginUrl,
+			LoginTime:    log.LoginTime.String(),
+			LoginIp:      log.LoginIp,
+			LoginAddress: log.LoginAddress,
+			Os:           log.Os,
+			Network:      log.Network,
+			Screen:       log.Screen,
+			Browser:      log.Browser,
+			Device:       deviceName,
+			IsRobot:      int32(log.IsRobot),
+			CreatedAt:    log.CreatedAt.String(),
+		}
+		list = append(list, logInfo)
+	}
+
+	return &v1.GetUserLoginLogsRes{
+		List:  list,
+		Count: int32(count),
+	}, nil
+}
+
+// getDeviceName 获取设备名称
+func (s *sUser) getDeviceName(device int) string {
+	switch device {
+	case 1:
+		return "电脑"
+	case 2:
+		return "手机"
+	case 3:
+		return "平板"
+	default:
+		return "未知"
+	}
+}

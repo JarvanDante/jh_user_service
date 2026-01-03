@@ -15,6 +15,9 @@ type (
 		GetUserGrades(ctx context.Context, req *v1.GetUserGradesReq) (*v1.GetUserGradesRes, error)
 		SaveUserGrades(ctx context.Context, req *v1.SaveUserGradesReq) (*v1.SaveUserGradesRes, error)
 		DeleteUserGrades(ctx context.Context, req *v1.DeleteUserGradesReq) (*v1.DeleteUserGradesRes, error)
+
+		// UserLoginLog相关方法
+		GetUserLoginLogs(ctx context.Context, req *v1.GetUserLoginLogsReq) (*v1.GetUserLoginLogsRes, error)
 	}
 )
 
